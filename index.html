@@ -30,6 +30,11 @@
         </div>
     </header>
 
+    <!-- LOADING INDICATOR -->
+    <div v-if="sedangMemuat" class="bg-yellow-100 text-yellow-800 text-center py-2 text-xs font-semibold shadow-inner">
+        🔄 Sedang menyinkronkan data dengan Cloud Database... Mohon tunggu.
+    </div>
+
     <!-- MAIN CONTENT -->
     <main class="container mx-auto p-4 flex-grow">
 
@@ -64,7 +69,7 @@
                                 </td>
                             </tr>
                             <tr v-if="listKelas.length === 0">
-                                <td colspan="2" class="border p-4 text-center text-gray-400">Belum ada data kelas. Silakan tambahkan kelas terlebih dahulu.</td>
+                                <td colspan="2" class="border p-4 text-center text-gray-400">Belum ada data kelas atau sedang memuat dari cloud...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -153,7 +158,7 @@
                             </td>
                         </tr>
                         <tr v-if="listMurid.length === 0">
-                            <td colspan="8" class="border p-4 text-center text-gray-400">Belum ada data murid. Silakan tambahkan manual atau unggah file Excel.</td>
+                            <td colspan="8" class="border p-4 text-center text-gray-400">Belum ada data murid atau sedang memuat dari cloud...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -328,7 +333,7 @@
                 </div>
             </div>
 
-            <!-- TABEL 1: REKAP BULANAN (MODEL MURID / KELAS) -->
+            <!-- TABEL 1: REKAP BULANAN -->
             <div v-if="rentangRekap === 'bulanan'" class="overflow-x-auto">
                 <table v-if="tipeRekap === 'murid'" class="w-full table-auto border-collapse border border-gray-200 text-left text-xs">
                     <thead>
@@ -359,7 +364,7 @@
                     </tbody>
                 </table>
 
-                <table v-slot:default v-if="tipeRekap === 'kelas'" class="w-full table-auto border-collapse border border-gray-200 text-left text-xs">
+                <table v-if="tipeRekap === 'kelas'" class="w-full table-auto border-collapse border border-gray-200 text-left text-xs">
                     <thead>
                         <tr class="bg-blue-900 text-white">
                             <th class="border p-2">Nama Kelas</th>
@@ -381,7 +386,7 @@
                 </table>
             </div>
 
-            <!-- TABEL 2: EVALUASI AKHIR SEMESTER (AGREGASI UTUH 1 SEMESTER) -->
+            <!-- TABEL 2: EVALUASI AKHIR SEMESTER -->
             <div v-if="rentangRekap === 'semester'" class="overflow-x-auto">
                 <table v-if="tipeRekap === 'murid'" class="w-full table-auto border-collapse border border-gray-200 text-left text-xs">
                     <thead>
@@ -389,8 +394,8 @@
                             <th class="border p-2">Nama Murid</th>
                             <th class="border p-2">Kelas</th>
                             <th class="border p-2">Program</th>
-                            <th class="border p-2">Total Setoran Terhitung</th>
-                            <th class="border p-2">Total Akumulasi Halaman (Semester)</th>
+                            <th class="border p-2">Total Setoran</th>
+                            <th class="border p-2">Total Akumulasi (Semester)</th>
                             <th class="border p-2">Target Mutlak (1 Semester)</th>
                             <th class="border p-2">Kekurangan Hafalan</th>
                             <th class="border p-2">Hasil Evaluasi Akhir</th>
@@ -420,9 +425,9 @@
                     <thead>
                         <tr class="bg-indigo-900 text-white">
                             <th class="border p-2">Nama Kelas</th>
-                            <th class="border p-2">Akumulasi Realisasi Semester (Semua Murid)</th>
-                            <th class="border p-2">Akumulasi Target Semester (Semua Murid)</th>
-                            <th class="border p-2">Persentase Ketercapaian Semester Kelas</th>
+                            <th class="border p-2">Akumulasi Realisasi Semester</th>
+                            <th class="border p-2">Akumulasi Target Semester</th>
+                            <th class="border p-2">Persentase Ketercapaian Kelas</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -455,66 +460,25 @@
 
   createApp({
     setup() {
+      // ⚠️ GANTI VALUE DI BAWAH INI DENGAN URL WEB APP GOOGLE APPS SCRIPT ANDA
       const API_URL = "https://script.google.com/macros/s/AKfycbxBj-k7ADbv92k0i_oVs2UepNxKpCr_xFr_FvVS6DvR1jEBLh79AhIyyxewyseSwuKW/exec";
+
       const currentTab = ref('kelas');
       const tipeRekap = ref('murid');
-      const rentangRekap = ref('bulanan'); // State baru: 'bulanan' atau 'semester'
+      const rentangRekap = ref('bulanan');
+      const sedangMemuat = ref(false);
 
       const filterJurnalKelas = ref('');
       const filterJurnalMurid = ref('');
       
+      const listKelas = ref([]);
+      const listMurid = ref([]);
+      const listJurnal = ref([]);
+
       const formKelas = ref({ nama: '' });
       const formMurid = ref({
         nama: '', kelas: '', program: '', startHafalan: '', tujuanAkhir: '', targetHalamanSemester: 0
       });
-
-      const tambahJurnal = async () => {
-  const id = formJurnal.value.idMurid;
-  if (id === '' || !formJurnal.value.bulan || !formJurnal.value.surahTerakhir || formJurnal.value.jumlahHalaman === '') {
-      alert('Lengkapi semua field input jurnal!'); return;
-  }
-  const m = listMurid.value[id];
-
-  const dataBaru = {
-    action: "tambahJurnal",
-    bulan: formJurnal.value.bulan,
-    nama: m.nama,
-    kelas: m.kelas,
-    program: m.program,
-    surahTerakhir: formJurnal.value.surahTerakhir,
-    jumlahHalaman: formJurnal.value.jumlahHalaman,
-    targetHalamanSemester: m.targetHalamanSemester
-  };
-
-  // Optimistic Update: Masukkan langsung ke layar agar guru tidak menunggu loading lama
-  listJurnal.value.push(dataBaru);
-
-  // Kirim ke database di latar belakang
-  try {
-    await fetch(API_URL, {
-      method: "POST",
-      body: JSON.stringify(dataBaru)
-    });
-    alert('Setoran berhasil diarsipkan ke Cloud secara aman!');
-  } catch (error) {
-    alert('Gagal sinkronisasi ke cloud, tetapi data tersimpan sementara di layar.');
-  }
-
-  // Reset Form
-  formJurnal.value.idMurid = ''; formJurnal.value.surahTerakhir = ''; formJurnal.value.jumlahHalaman = '';
-};
-
-      const muatDataDariDatabase = async () => {
-  	try {
-	    const respon = await fetch(API_URL);
-	    const hasil = await respon.json();
-	    listKelas.value = hasil.kelas;
- 	    listMurid.value = hasil.murid;
-	    listJurnal.value = hasil.jurnal;
-	} catch (error) {
-	    console.error("Gagal memuat database cloud:", error);
-	}
-      };
 
       const formJurnal = ref({
         idMurid: '', bulan: new Date().toISOString().substring(0, 7), surahTerakhir: '', jumlahHalaman: ''
@@ -526,99 +490,90 @@
 
       let chartInstance = null;
 
+      // ================= DATA FETCHER FROM CLOUD =================
+      const muatDataDariDatabase = async () => {
+        if (API_URL.includes("PASTE_URL")) return;
+        sedangMemuat.value = true;
+        try {
+          const respon = await fetch(API_URL);
+          const hasil = await respon.json();
+          listKelas.value = hasil.kelas || [];
+          listMurid.value = hasil.murid || [];
+          listJurnal.value = hasil.jurnal || [];
+        } catch (error) {
+          console.error("Gagal memuat database cloud:", error);
+        } finally {
+          sedangMemuat.value = false;
+        }
+      };
+
+      // Panggil fungsi muat data cloud otomatis di awal aplikasi dibuka
+      muatDataDariDatabase();
+
+      // ================= KELOLA KELAS MODIFIED =================
       const tambahKelas = async () => {
-  if (!formKelas.value.nama.trim()) { 
-    alert('Nama kelas tidak boleh kosong!'); 
-    return; 
-  }
-  if (listKelas.value.some(k => k.nama.toLowerCase() === formKelas.value.nama.toLowerCase())) { 
-    alert('Nama kelas sudah ada!'); 
-    return; 
-  }
+        if (!formKelas.value.nama.trim()) { alert('Nama kelas tidak boleh kosong!'); return; }
+        if (listKelas.value.some(k => k.nama.toLowerCase() === formKelas.value.nama.toLowerCase())) { alert('Nama kelas sudah ada!'); return; }
 
-  const dataBaru = {
-    action: "tambahKelas",
-    nama: formKelas.value.nama
-  };
+        const dataBaru = {
+          action: "tambahKelas",
+          nama: formKelas.value.nama
+        };
 
-  // Optimistic Update: Masukkan langsung ke layar
-  listKelas.value.push({ nama: dataBaru.nama });
-  
-  // Reset input form di layar
-  const namaSelesai = formKelas.value.nama;
-  formKelas.value.nama = '';
+        // Optimistic Update
+        listKelas.value.push({ nama: dataBaru.nama });
+        const namaSelesai = formKelas.value.nama;
+        formKelas.value.nama = '';
 
-  // Kirim data ke database Google Sheets di latar belakang
-  try {
-    const respon = await fetch(API_URL, {
-      method: "POST",
-      body: JSON.stringify(dataBaru)
-    });
-    const hasil = await respon.json();
-    
-    if (hasil.status === "success") {
-      alert(`Kelas "${namaSelesai}" berhasil disimpan ke Cloud!`);
-    } else {
-      alert('Gagal sinkronisasi ke cloud: ' + hasil.message);
-    }
-  } catch (error) {
-    console.error(error);
-    alert('Koneksi terputus. Data kelas tersimpan di layar, namun gagal sinkronisasi ke cloud.');
-  }
-};
+        try {
+          await fetch(API_URL, { method: "POST", body: JSON.stringify(dataBaru) });
+          console.log(`Kelas "${namaSelesai}" tersinkronisasi.`);
+        } catch (error) {
+          console.error(error);
+          alert('Koneksi terputus. Data disimpan lokal di layar, gagal sync ke cloud.');
+        }
+      };
 
       const hapusKelas = (index) => {
-        if (confirm('Apakah Anda yakin ingin menghapus kelas ini?')) { listKelas.value.splice(index, 1); }
+        if (confirm('Apakah Anda yakin ingin menghapus kelas ini secara lokal?')) { listKelas.value.splice(index, 1); }
       };
 
       const updateTargetOtomatis = () => {
         formMurid.value.targetHalamanSemester = formMurid.value.program === 'Pondok' ? 20 : formMurid.value.program === 'Reguler' ? 10 : 0;
       };
 
+      // ================= KELOLA MURID MODIFIED =================
       const tambahMurid = async () => {
-  if (!formMurid.value.nama || !formMurid.value.program || !formMurid.value.kelas) {
-    alert('Lengkapi nama murid, kelas, dan program terlebih dahulu!'); 
-    return;
-  }
+        if (!formMurid.value.nama || !formMurid.value.program || !formMurid.value.kelas) {
+          alert('Lengkapi nama murid, kelas, dan program terlebih dahulu!'); return;
+        }
 
-  const dataBaru = {
-    action: "tambahMurid",
-    nama: formMurid.value.nama,
-    kelas: formMurid.value.kelas,
-    program: formMurid.value.program,
-    startHafalan: formMurid.value.startHafalan || '-',
-    tujuanAkhir: formMurid.value.tujuanAkhir || '-',
-    targetHalamanSemester: formMurid.value.targetHalamanSemester
-  };
+        const dataBaru = {
+          action: "tambahMurid",
+          nama: formMurid.value.nama,
+          kelas: formMurid.value.kelas,
+          program: formMurid.value.program,
+          startHafalan: formMurid.value.startHafalan || '-',
+          tujuanAkhir: formMurid.value.tujuanAkhir || '-',
+          targetHalamanSemester: formMurid.value.targetHalamanSemester
+        };
 
-  // Optimistic Update: Masukkan langsung ke tabel layar
-  listMurid.value.push({ ...dataBaru });
+        // Optimistic Update
+        listMurid.value.push({ ...dataBaru });
+        const namaMuridSelesai = formMurid.value.nama;
+        formMurid.value = { nama: '', kelas: '', program: '', startHafalan: '', tujuanAkhir: '', targetHalamanSemester: 0 };
 
-  // Reset Form di layar
-  const namaMuridSelesai = formMurid.value.nama;
-  formMurid.value = { nama: '', kelas: '', program: '', startHafalan: '', tujuanAkhir: '', targetHalamanSemester: 0 };
-
-  // Kirim data ke database Google Sheets di latar belakang
-  try {
-    const respon = await fetch(API_URL, {
-      method: "POST",
-      body: JSON.stringify(dataBaru)
-    });
-    const hasil = await respon.json();
-
-    if (hasil.status === "success") {
-      alert(`Data murid "${namaMuridSelesai}" berhasil disimpan ke Cloud!`);
-    } else {
-      alert('Gagal sinkronisasi ke cloud: ' + hasil.message);
-    }
-  } catch (error) {
-    console.error(error);
-    alert('Koneksi terputus. Data murid tersimpan di layar, namun gagal sinkronisasi ke cloud.');
-  }
-};
+        try {
+          await fetch(API_URL, { method: "POST", body: JSON.stringify(dataBaru) });
+          console.log(`Murid "${namaMuridSelesai}" tersinkronisasi.`);
+        } catch (error) {
+          console.error(error);
+          alert('Koneksi terputus. Data disimpan lokal di layar, gagal sync ke cloud.');
+        }
+      };
 
       const hapusMurid = (index) => {
-        if (confirm('Apakah Anda yakin ingin menghapus murid ini?')) { listMurid.value.splice(index, 1); }
+        if (confirm('Apakah Anda yakin ingin menghapus murid ini secara lokal?')) { listMurid.value.splice(index, 1); }
       };
 
       const isiOtomatisDataMurid = () => {
@@ -634,25 +589,43 @@
         }
       };
 
-      const tambahJurnal = () => {
+      // ================= JURNAL INPUT MODIFIED =================
+      const tambahJurnal = async () => {
         const id = formJurnal.value.idMurid;
         if (id === '' || !formJurnal.value.bulan || !formJurnal.value.surahTerakhir || formJurnal.value.jumlahHalaman === '') {
             alert('Lengkapi semua field input jurnal!'); return;
         }
         const m = listMurid.value[id];
-        listJurnal.value.push({
-            bulan: formJurnal.value.bulan, nama: m.nama, kelas: m.kelas, program: m.program,
-            surahTerakhir: formJurnal.value.surahTerakhir, jumlahHalaman: formJurnal.value.jumlahHalaman,
-            targetHalamanSemester: m.targetHalamanSemester
-        });
+        
+        const dataBaru = {
+          action: "tambahJurnal",
+          bulan: formJurnal.value.bulan,
+          nama: m.nama,
+          kelas: m.kelas,
+          program: m.program,
+          surahTerakhir: formJurnal.value.surahTerakhir,
+          jumlahHalaman: formJurnal.value.jumlahHalaman,
+          targetHalamanSemester: m.targetHalamanSemester
+        };
+
+        // Optimistic Update
+        listJurnal.value.push({ ...dataBaru });
         formJurnal.value.idMurid = ''; formJurnal.value.surahTerakhir = ''; formJurnal.value.jumlahHalaman = '';
-        alert('Setoran bulanan berhasil diarsipkan!');
+
+        try {
+          await fetch(API_URL, { method: "POST", body: JSON.stringify(dataBaru) });
+          console.log("Setoran baru tersinkronisasi ke cloud.");
+        } catch (error) {
+          console.error(error);
+          alert('Koneksi terputus. Data disimpan lokal di layar, gagal sync ke cloud.');
+        }
       };
 
       const hapusJurnal = (index) => {
-        if (confirm('Hapus entri jurnal ini?')) { listJurnal.value.splice(index, 1); }
+        if (confirm('Hapus entri jurnal ini secara lokal?')) { listJurnal.value.splice(index, 1); }
       };
 
+      // ================= FILTERS & COMPUTEDS =================
       const listMuridTerfilter = computed(() => {
         if (!filterJurnalKelas.value) return listMurid.value;
         return listMurid.value.filter(m => m.kelas === filterJurnalKelas.value);
@@ -673,7 +646,6 @@
         return `${namaBulan[parseInt(parts[1]) - 1]} ${parts[0]}`;
       };
 
-      // COMPUTED PROPERTY AGREGASI AGAR TINGKAT SEMESTER BISA DISAJIKAN DENGAN MUDAH
       const rekapSemesterMurid = computed(() => {
         const mapMurid = {};
         listMurid.value.forEach(m => {
@@ -681,7 +653,7 @@
         });
         listJurnal.value.forEach(j => {
             if (mapMurid[j.nama]) {
-                mapMurid[j.nama].totalRealisasi += j.jumlahHalaman;
+                mapMurid[j.nama].totalRealisasi += Number(j.jumlahHalaman || 0);
                 mapMurid[j.nama].totalBulan += 1;
             }
         });
@@ -708,7 +680,9 @@
         listJurnal.value.forEach(j => {
             const namaK = j.kelas || 'Belum Ditentukan';
             if (!mapKelas[namaK]) { mapKelas[namaK] = { namaKelas: namaK, totalSetoran: 0, totalRealisasi: 0, totalTargetBulanan: 0 }; }
-            mapKelas[namaK].totalSetoran += 1; mapKelas[namaK].totalRealisasi += j.jumlahHalaman; mapKelas[namaK].totalTargetBulanan += (j.targetHalamanSemester / 6);
+            mapKelas[namaK].totalSetoran += 1; 
+            mapKelas[namaK].totalRealisasi += Number(j.jumlahHalaman || 0); 
+            mapKelas[namaK].totalTargetBulanan += (Number(j.targetHalamanSemester || 0) / 6);
         });
         return Object.values(mapKelas).map(item => {
             const persentase = item.totalTargetBulanan > 0 ? Math.round((item.totalRealisasi / item.totalTargetBulanan) * 100) : 0;
@@ -716,20 +690,21 @@
         });
       });
 
-      const hitungTotalHalamanSemua = () => listJurnal.value.reduce((acc, curr) => acc + (curr.jumlahHalaman || 0), 0).toFixed(1);
+      const hitungTotalHalamanSemua = () => listJurnal.value.reduce((acc, curr) => acc + Number(curr.jumlahHalaman || 0), 0).toFixed(1);
 
       const hitungRasioTarget = () => {
         if (listJurnal.value.length === 0) return 0;
         if (rentangRekap.value === 'bulanan') {
-            const tercapai = listJurnal.value.filter(j => j.jumlahHalaman >= (j.targetHalamanSemester / 6)).length;
+            const tercapai = listJurnal.value.filter(j => Number(j.jumlahHalaman) >= (Number(j.targetHalamanSemester) / 6)).length;
             return Math.round((tercapai / listJurnal.value.length) * 100);
         } else {
+            if (listMurid.value.length === 0) return 0;
             const lulus = rekapSemesterMurid.value.filter(rm => rm.totalRealisasi >= rm.targetSemester).length;
             return Math.round((lulus / listMurid.value.length) * 100);
         }
       };
 
-      // VISUALISASI GRAFIK DINAMIS (BISA REKAP BULANAN MAUPUN SEMESTERAN)
+      // ================= VISUALISASI CHART =================
       const renderGrafikStatistik = () => {
         nextTick(() => {
             const ctx = document.getElementById('canvasChart');
@@ -777,7 +752,7 @@
         });
       };
 
-      // EKSPOR REKAP KE EXCEL YANG MENYESUAIKAN FILTRASI RENTANG
+      // ================= EXPORT & IMPORT EXCEL =================
       const eksporExcel = () => {
         if (listJurnal.value.length === 0) { alert('Tidak ada data untuk diekspor!'); return; }
         let dataSheet = [];
@@ -820,13 +795,30 @@
         reader.onload = (e) => {
             const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
             const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-            jsonData.forEach(row => {
-                const nama = row['Nama'] || row['nama']; const kelas = row['Kelas'] || row['kelas'] || '';
+            jsonData.forEach(async (row) => {
+                const nama = row['Nama'] || row['nama']; 
+                const kelas = (row['Kelas'] || row['kelas'] || '').toString();
                 let program = (row['Program'] || row['program'] || '').toString().toLowerCase().includes('pondok') ? 'Pondok' : 'Reguler';
-                if (kelas && !listKelas.value.some(k => k.nama.toLowerCase() === kelas.toString().toLowerCase())) listKelas.value.push({ nama: kelas });
-                if (nama) listMurid.value.push({ nama, kelas, program, startHafalan: row['StartHafalan'] || '-', tujuanAkhir: row['TujuanAkhir'] || '-', targetHalamanSemester: program === 'Pondok' ? 20 : 10 });
+                
+                if (kelas && !listKelas.value.some(k => k.nama.toLowerCase() === kelas.toLowerCase())) {
+                    listKelas.value.push({ nama: kelas });
+                }
+                if (nama) {
+                    const dataMuridBaru = {
+                      action: "tambahMurid",
+                      nama, kelas, program,
+                      startHafalan: row['StartHafalan'] || '-',
+                      tujuanAkhir: row['TujuanAkhir'] || '-',
+                      targetHalamanSemester: program === 'Pondok' ? 20 : 10
+                    };
+                    listMurid.value.push(dataMuridBaru);
+                    try {
+                      await fetch(API_URL, { method: "POST", body: JSON.stringify(dataMuridBaru) });
+                    } catch(e) { console.error("Gagal sync murid impor", e); }
+                }
             });
-            alert('Data murid berhasil diimpor!'); event.target.value = '';
+            alert('Proses impor masal berhasil diproses ke antrean layar!'); 
+            event.target.value = '';
         };
         reader.readAsArrayBuffer(file);
       };
@@ -837,13 +829,12 @@
       };
 
       return {
-        currentTab, tipeRekap, rentangRekap, filterJurnalKelas, filterJurnalMurid, listKelas, listMurid, listJurnal,
+        currentTab, tipeRekap, rentangRekap, sedangMemuat, filterJurnalKelas, filterJurnalMurid, listKelas, listMurid, listJurnal,
         listMuridTerfilter, listJurnalTerfilter, rekapSemesterMurid, rekapSemesterKelas, rekapPerKelasBulanan,
         formKelas, formMurid, formJurnal, tempInfoMurid, tambahKelas, hapusKelas, updateTargetOtomatis,
         tambahMurid, hapusMurid, isiOtomatisDataMurid, tambahJurnal, hapusJurnal, formatBulanIndo, importExcel,
         eksporExcel, hitungTotalHalamanSemua, hitungRasioTarget, renderGrafikStatistik, tabClass
       };
-	muatDataDariDatabase();
     }
   }).mount('#app');
 </script>
