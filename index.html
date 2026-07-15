@@ -455,6 +455,7 @@
 
   createApp({
     setup() {
+      const API_URL = "https://script.google.com/macros/s/AKfycbxBj-k7ADbv92k0i_oVs2UepNxKpCr_xFr_FvVS6DvR1jEBLh79AhIyyxewyseSwuKW/exec";
       const currentTab = ref('kelas');
       const tipeRekap = ref('murid');
       const rentangRekap = ref('bulanan'); // State baru: 'bulanan' atau 'semester'
@@ -462,33 +463,58 @@
       const filterJurnalKelas = ref('');
       const filterJurnalMurid = ref('');
       
-      const listKelas = ref([
-        { nama: 'X.1' },
-        { nama: 'X.2' },
-        { nama: 'XI IPA 1' }
-      ]);
-
-      const listMurid = ref([
-        { nama: 'Achmad Fauzi', kelas: 'XI IPA 1', program: 'Pondok', startHafalan: 'Juz 30', tujuanAkhir: 'Juz 25', targetHalamanSemester: 20 },
-        { nama: 'Siti Aminah', kelas: 'X.1', program: 'Reguler', startHafalan: 'Juz 30', tujuanAkhir: 'Juz 28', targetHalamanSemester: 10 }
-      ]);
-      
-      // Mengisi dummy setoran bulanan sebagai simulasi berjalan beberapa bulan
-      const listJurnal = ref([
-        { bulan: '2026-01', nama: 'Achmad Fauzi', kelas: 'XI IPA 1', program: 'Pondok', surahTerakhir: 'An-Naba', jumlahHalaman: 4, targetHalamanSemester: 20 },
-        { bulan: '2026-02', nama: 'Achmad Fauzi', kelas: 'XI IPA 1', program: 'Pondok', surahTerakhir: 'An-Naziat', jumlahHalaman: 5, targetHalamanSemester: 20 },
-        { bulan: '2026-03', nama: 'Achmad Fauzi', kelas: 'XI IPA 1', program: 'Pondok', surahTerakhir: 'Abasa', jumlahHalaman: 6, targetHalamanSemester: 20 },
-        { bulan: '2026-04', nama: 'Achmad Fauzi', kelas: 'XI IPA 1', program: 'Pondok', surahTerakhir: 'At-Takwir', jumlahHalaman: 7, targetHalamanSemester: 20 },
-        
-        { bulan: '2026-01', nama: 'Siti Aminah', kelas: 'X.1', program: 'Reguler', surahTerakhir: 'Ad-Duha', jumlahHalaman: 2, targetHalamanSemester: 10 },
-        { bulan: '2026-02', nama: 'Siti Aminah', kelas: 'X.1', program: 'Reguler', surahTerakhir: 'Al-Insyirah', jumlahHalaman: 1.5, targetHalamanSemester: 10 },
-        { bulan: '2026-03', nama: 'Siti Aminah', kelas: 'X.1', program: 'Reguler', surahTerakhir: 'Al-Tin', jumlahHalaman: 2, targetHalamanSemester: 10 }
-      ]);
-
       const formKelas = ref({ nama: '' });
       const formMurid = ref({
         nama: '', kelas: '', program: '', startHafalan: '', tujuanAkhir: '', targetHalamanSemester: 0
       });
+
+      const tambahJurnal = async () => {
+  const id = formJurnal.value.idMurid;
+  if (id === '' || !formJurnal.value.bulan || !formJurnal.value.surahTerakhir || formJurnal.value.jumlahHalaman === '') {
+      alert('Lengkapi semua field input jurnal!'); return;
+  }
+  const m = listMurid.value[id];
+
+  const dataBaru = {
+    action: "tambahJurnal",
+    bulan: formJurnal.value.bulan,
+    nama: m.nama,
+    kelas: m.kelas,
+    program: m.program,
+    surahTerakhir: formJurnal.value.surahTerakhir,
+    jumlahHalaman: formJurnal.value.jumlahHalaman,
+    targetHalamanSemester: m.targetHalamanSemester
+  };
+
+  // Optimistic Update: Masukkan langsung ke layar agar guru tidak menunggu loading lama
+  listJurnal.value.push(dataBaru);
+
+  // Kirim ke database di latar belakang
+  try {
+    await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify(dataBaru)
+    });
+    alert('Setoran berhasil diarsipkan ke Cloud secara aman!');
+  } catch (error) {
+    alert('Gagal sinkronisasi ke cloud, tetapi data tersimpan sementara di layar.');
+  }
+
+  // Reset Form
+  formJurnal.value.idMurid = ''; formJurnal.value.surahTerakhir = ''; formJurnal.value.jumlahHalaman = '';
+};
+
+      const muatDataDariDatabase = async () => {
+  	try {
+	    const respon = await fetch(API_URL);
+	    const hasil = await respon.json();
+	    listKelas.value = hasil.kelas;
+ 	    listMurid.value = hasil.murid;
+	    listJurnal.value = hasil.jurnal;
+	} catch (error) {
+	    console.error("Gagal memuat database cloud:", error);
+	}
+      };
 
       const formJurnal = ref({
         idMurid: '', bulan: new Date().toISOString().substring(0, 7), surahTerakhir: '', jumlahHalaman: ''
@@ -500,13 +526,46 @@
 
       let chartInstance = null;
 
-      const tambahKelas = () => {
-        if (!formKelas.value.nama.trim()) { alert('Nama kelas tidak boleh kosong!'); return; }
-        if (listKelas.value.some(k => k.nama.toLowerCase() === formKelas.value.nama.toLowerCase())) { alert('Nama kelas sudah ada!'); return; }
-        listKelas.value.push({ nama: formKelas.value.nama });
-        formKelas.value.nama = '';
-        alert('Data kelas baru berhasil disimpan!');
-      };
+      const tambahKelas = async () => {
+  if (!formKelas.value.nama.trim()) { 
+    alert('Nama kelas tidak boleh kosong!'); 
+    return; 
+  }
+  if (listKelas.value.some(k => k.nama.toLowerCase() === formKelas.value.nama.toLowerCase())) { 
+    alert('Nama kelas sudah ada!'); 
+    return; 
+  }
+
+  const dataBaru = {
+    action: "tambahKelas",
+    nama: formKelas.value.nama
+  };
+
+  // Optimistic Update: Masukkan langsung ke layar
+  listKelas.value.push({ nama: dataBaru.nama });
+  
+  // Reset input form di layar
+  const namaSelesai = formKelas.value.nama;
+  formKelas.value.nama = '';
+
+  // Kirim data ke database Google Sheets di latar belakang
+  try {
+    const respon = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify(dataBaru)
+    });
+    const hasil = await respon.json();
+    
+    if (hasil.status === "success") {
+      alert(`Kelas "${namaSelesai}" berhasil disimpan ke Cloud!`);
+    } else {
+      alert('Gagal sinkronisasi ke cloud: ' + hasil.message);
+    }
+  } catch (error) {
+    console.error(error);
+    alert('Koneksi terputus. Data kelas tersimpan di layar, namun gagal sinkronisasi ke cloud.');
+  }
+};
 
       const hapusKelas = (index) => {
         if (confirm('Apakah Anda yakin ingin menghapus kelas ini?')) { listKelas.value.splice(index, 1); }
@@ -516,14 +575,47 @@
         formMurid.value.targetHalamanSemester = formMurid.value.program === 'Pondok' ? 20 : formMurid.value.program === 'Reguler' ? 10 : 0;
       };
 
-      const tambahMurid = () => {
-        if (!formMurid.value.nama || !formMurid.value.program || !formMurid.value.kelas) {
-            alert('Lengkapi nama murid, kelas, dan program terlebih dahulu!'); return;
-        }
-        listMurid.value.push({ ...formMurid.value });
-        formMurid.value = { nama: '', kelas: '', program: '', startHafalan: '', tujuanAkhir: '', targetHalamanSemester: 0 };
-        alert('Data murid berhasil disimpan!');
-      };
+      const tambahMurid = async () => {
+  if (!formMurid.value.nama || !formMurid.value.program || !formMurid.value.kelas) {
+    alert('Lengkapi nama murid, kelas, dan program terlebih dahulu!'); 
+    return;
+  }
+
+  const dataBaru = {
+    action: "tambahMurid",
+    nama: formMurid.value.nama,
+    kelas: formMurid.value.kelas,
+    program: formMurid.value.program,
+    startHafalan: formMurid.value.startHafalan || '-',
+    tujuanAkhir: formMurid.value.tujuanAkhir || '-',
+    targetHalamanSemester: formMurid.value.targetHalamanSemester
+  };
+
+  // Optimistic Update: Masukkan langsung ke tabel layar
+  listMurid.value.push({ ...dataBaru });
+
+  // Reset Form di layar
+  const namaMuridSelesai = formMurid.value.nama;
+  formMurid.value = { nama: '', kelas: '', program: '', startHafalan: '', tujuanAkhir: '', targetHalamanSemester: 0 };
+
+  // Kirim data ke database Google Sheets di latar belakang
+  try {
+    const respon = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify(dataBaru)
+    });
+    const hasil = await respon.json();
+
+    if (hasil.status === "success") {
+      alert(`Data murid "${namaMuridSelesai}" berhasil disimpan ke Cloud!`);
+    } else {
+      alert('Gagal sinkronisasi ke cloud: ' + hasil.message);
+    }
+  } catch (error) {
+    console.error(error);
+    alert('Koneksi terputus. Data murid tersimpan di layar, namun gagal sinkronisasi ke cloud.');
+  }
+};
 
       const hapusMurid = (index) => {
         if (confirm('Apakah Anda yakin ingin menghapus murid ini?')) { listMurid.value.splice(index, 1); }
@@ -751,6 +843,7 @@
         tambahMurid, hapusMurid, isiOtomatisDataMurid, tambahJurnal, hapusJurnal, formatBulanIndo, importExcel,
         eksporExcel, hitungTotalHalamanSemua, hitungRasioTarget, renderGrafikStatistik, tabClass
       };
+	muatDataDariDatabase();
     }
   }).mount('#app');
 </script>
