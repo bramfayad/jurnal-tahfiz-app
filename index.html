@@ -4,9 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jurnal Tahfiz SMA MuAD</title>
+    <!-- Tailwind CSS untuk Styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Vue 3 CDN -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- SheetJS CDN untuk Import & Export Excel -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Chart.js CDN untuk Visualisasi Data Statistik -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans">
@@ -28,7 +32,7 @@
 
     <!-- LOADING INDICATOR -->
     <div v-if="sedangMemuat" class="bg-yellow-100 text-yellow-800 text-center py-2 text-xs font-semibold shadow-inner">
-        🔄 Sedang memproses data dengan Cloud Database... Mohon tunggu.
+        🔄 Sedang menyinkronkan data dengan Cloud Database... Mohon tunggu.
     </div>
 
     <!-- MAIN CONTENT -->
@@ -37,29 +41,43 @@
         <!-- TAB 1: KELOLA KELAS -->
         <section v-if="currentTab === 'kelas'" class="bg-white p-6 rounded-lg shadow">
             <h2 class="text-xl font-bold mb-4 text-blue-800 border-b pb-2">Kelola Data Kelas</h2>
+            
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <!-- Form Tambah/Edit Kelas -->
                 <div class="bg-gray-50 p-4 rounded-lg border">
-                    <h3 class="font-semibold mb-3 text-gray-700">{{ isEditKelas ? 'Edit Kelas' : 'Tambah Kelas Baru' }}</h3>
+                    <h3 class="font-semibold mb-3 text-gray-700">{{ isEditKelas ? 'Edit Data Kelas' : 'Tambah Kelas Baru' }}</h3>
                     <div class="space-y-3">
-                        <input type="text" v-model="formKelas.nama" placeholder="Nama Kelas (Contoh: X.1)" class="w-full p-2 border rounded">
-                        <button @click="simpanKelas" class="w-full bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800 transition">
-                            {{ isEditKelas ? 'Perbarui Kelas' : 'Simpan Kelas' }}
-                        </button>
-                        <button v-if="isEditKelas" @click="batalEditKelas" class="w-full bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500 transition">Batal</button>
+                        <input type="text" v-model="formKelas.nama" placeholder="Nama Kelas (Contoh: X.1, XI IPA 1)" class="w-full p-2 border rounded">
+                        <div class="flex gap-2">
+                            <button @click="simpanKelas" class="flex-1 bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800 transition">
+                                {{ isEditKelas ? 'Update Kelas' : 'Simpan Kelas' }}
+                            </button>
+                            <button v-if="isEditKelas" @click="batalEditKelas" class="bg-gray-500 text-white px-3 py-2 rounded hover:bg-gray-600 transition">
+                                Batal
+                            </button>
+                        </div>
                     </div>
                 </div>
+
+                <!-- Tabel Daftar Kelas -->
                 <div class="md:col-span-2 overflow-x-auto">
                     <table class="w-full table-auto border-collapse border border-gray-200 text-left text-sm">
                         <thead>
-                            <tr class="bg-gray-100"><th class="border p-3">Nama Kelas</th><th class="border p-3 text-center">Aksi</th></tr>
+                            <tr class="bg-gray-100">
+                                <th class="border p-3">Nama Kelas</th>
+                                <th class="border p-3 text-center">Aksi</th>
+                            </tr>
                         </thead>
                         <tbody>
                             <tr v-for="(k, index) in listKelas" :key="index" class="hover:bg-gray-50">
                                 <td class="border p-3 font-medium">{{ k.nama }}</td>
                                 <td class="border p-3 text-center space-x-2">
-                                    <button @click="pilihEditKelas(index)" class="text-blue-600 hover:underline">Edit</button>
-                                    <button @click="hapusData('kelas', index)" class="text-red-600 hover:underline">Hapus</button>
+                                    <button @click="editKelas(index)" class="text-blue-600 hover:underline">Edit</button>
+                                    <button @click="hapusKelasBackend(index)" class="text-red-600 hover:underline">Hapus</button>
                                 </td>
+                            </tr>
+                            <tr v-if="listKelas.length === 0">
+                                <td colspan="2" class="border p-4 text-center text-gray-400">Belum ada data kelas atau sedang memuat dari cloud...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -69,57 +87,94 @@
 
         <!-- TAB 2: KELOLA MURID & TARGET -->
         <section v-if="currentTab === 'murid'" class="bg-white p-6 rounded-lg shadow">
-            <h2 class="text-xl font-bold mb-4 text-blue-800 border-b pb-2">Kelola Data Murid</h2>
+            <h2 class="text-xl font-bold mb-4 text-blue-800 border-b pb-2">Kelola Data Murid & Target Hafalan</h2>
+            
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <!-- Form Manual Murid (Tambah/Edit) -->
                 <div class="lg:col-span-2 bg-gray-50 p-4 rounded-lg border">
                     <h3 class="font-semibold mb-3 text-gray-700">{{ isEditMurid ? 'Edit Data Murid' : 'Tambah Murid Baru' }}</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <input type="text" v-model="formMurid.nama" placeholder="Nama Lengkap Murid" class="p-2 border rounded">
+                        
                         <select v-model="formMurid.kelas" class="p-2 border rounded">
                             <option value="">-- Pilih Kelas --</option>
-                            <option v-for="k in listKelas" :value="k.nama">{{ k.nama }}</option>
+                            <option v-for="k in listKelas" :value="k.nama" :key="k.nama">{{ k.nama }}</option>
                         </select>
+
                         <select v-model="formMurid.program" @change="updateTargetOtomatis" class="p-2 border rounded">
                             <option value="">-- Pilih Program --</option>
-                            <option value="Pondok">Pondok (20 Hal)</option>
-                            <option value="Reguler">Reguler (10 Hal)</option>
+                            <option value="Pondok">Pondok (Target Semester: 20 Halaman)</option>
+                            <option value="Reguler">Reguler (Target Semester: 10 Halaman)</option>
                         </select>
-                        <input type="text" v-model="formMurid.startHafalan" placeholder="Mulai Dari" class="p-2 border rounded">
-                        <input type="text" v-model="formMurid.tujuanAkhir" placeholder="Target Akhir" class="p-2 border rounded md:col-span-2">
+                        <input type="text" v-model="formMurid.startHafalan" placeholder="Mulai Dari (Contoh: Juz 30 / An-Naba)" class="p-2 border rounded">
+                        <input type="text" v-model="formMurid.tujuanAkhir" placeholder="Target Akhir (Contoh: Juz 28)" class="p-2 border rounded-md md:col-span-2">
                     </div>
-                    <div class="mt-4 flex justify-between items-center">
-                        <span class="text-sm font-medium">Target: <strong class="text-blue-700">{{ formMurid.targetHalamanSemester }} Hal</strong></span>
-                        <div class="space-x-2">
-                            <button v-if="isEditMurid" @click="batalEditMurid" class="bg-gray-400 text-white px-4 py-2 rounded">Batal</button>
-                            <button @click="simpanMurid" class="bg-blue-700 text-white px-4 py-2 rounded">{{ isEditMurid ? 'Perbarui' : 'Simpan' }}</button>
+                    <div class="mt-4 flex justify-between items-center flex-wrap gap-2">
+                        <span class="text-sm text-gray-600 font-medium">
+                            Target Semester: <strong class="text-blue-700">{{ formMurid.targetHalamanSemester }} Halaman</strong> 
+                            <span class="text-xs text-gray-400 ml-1">(Proporsi Bulanan: {{ (formMurid.targetHalamanSemester / 6).toFixed(2) }} Halaman)</span>
+                        </span>
+                        <div class="flex gap-2">
+                            <button @click="simpanMurid" class="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800 transition">
+                                {{ isEditMurid ? 'Update Murid' : 'Simpan Murid' }}
+                            </button>
+                            <button v-if="isEditMurid" @click="batalEditMurid" class="bg-gray-500 text-white px-3 py-2 rounded hover:bg-gray-600 transition">
+                                Batal
+                            </button>
                         </div>
                     </div>
                 </div>
+
+                <!-- Import Excel Area -->
                 <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                    <h3 class="font-semibold text-yellow-800 mb-2">Import via Excel</h3>
-                    <input type="file" @change="importExcel" accept=".xlsx, .xls" class="block w-full text-xs">
+                    <h3 class="font-semibold text-yellow-800 mb-2">Import Masal via Excel</h3>
+                    <p class="text-xs text-yellow-700 mb-3 leading-relaxed">
+                        Pastikan file Excel Anda memiliki tajuk kolom berikut di baris pertama:<br>
+                        <code class="bg-white px-1 py-0.5 rounded border font-mono">Nama</code>, 
+                        <code class="bg-white px-1 py-0.5 rounded border font-mono">Kelas</code>, 
+                        <code class="bg-white px-1 py-0.5 rounded border font-mono">Program</code> (Pondok/Reguler), 
+                        <code class="bg-white px-1 py-0.5 rounded border font-mono">StartHafalan</code>, 
+                        <code class="bg-white px-1 py-0.5 rounded border font-mono">TujuanAkhir</code>.
+                    </p>
+                    <input type="file" @change="importExcel" accept=".xlsx, .xls" class="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-yellow-100 file:text-yellow-700 hover:file:bg-yellow-200">
                 </div>
             </div>
+
+            <!-- Tabel Daftar Murid -->
             <div class="overflow-x-auto">
                 <table class="w-full table-auto border-collapse border border-gray-200 text-left text-sm">
                     <thead>
                         <tr class="bg-gray-100">
-                            <th class="border p-3">Nama</th><th class="border p-3">Kelas</th><th class="border p-3">Program</th>
-                            <th class="border p-3">Start</th><th class="border p-3">Tujuan</th><th class="border p-3">Target</th><th class="border p-3 text-center">Aksi</th>
+                            <th class="border p-3">Nama</th>
+                            <th class="border p-3">Kelas</th>
+                            <th class="border p-3">Program</th>
+                            <th class="border p-3">Start Hafalan</th>
+                            <th class="border p-3">Tujuan Akhir</th>
+                            <th class="border p-3">Target Semester</th>
+                            <th class="border p-3">Target Bulanan</th>
+                            <th class="border p-3 text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="(m, index) in listMurid" :key="index" class="hover:bg-gray-50">
                             <td class="border p-3 font-medium">{{ m.nama }}</td>
-                            <td class="border p-3">{{ m.kelas }}</td>
-                            <td class="border p-3">{{ m.program }}</td>
-                            <td class="border p-3">{{ m.startHafalan }}</td>
-                            <td class="border p-3">{{ m.tujuanAkhir }}</td>
-                            <td class="border p-3">{{ m.targetHalamanSemester }} Hal</td>
-                            <td class="border p-3 text-center space-x-2">
-                                <button @click="pilihEditMurid(index)" class="text-blue-600 hover:underline">Edit</button>
-                                <button @click="hapusData('murid', index)" class="text-red-600 hover:underline">Hapus</button>
+                            <td class="border p-3"><span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded font-semibold">{{ m.kelas || 'Belum Ditentukan' }}</span></td>
+                            <td class="border p-3">
+                                <span :class="m.program === 'Pondok' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'" class="px-2 py-1 rounded text-xs font-semibold">
+                                    {{ m.program }}
+                                </span>
                             </td>
+                            <td class="border p-3 text-gray-600">{{ m.startHafalan }}</td>
+                            <td class="border p-3 text-gray-600">{{ m.tujuanAkhir }}</td>
+                            <td class="border p-3 font-semibold text-purple-700">{{ m.targetHalamanSemester }} Hal</td>
+                            <td class="border p-3 font-semibold text-blue-700">{{ (m.targetHalamanSemester / 6).toFixed(2) }} Hal</td>
+                            <td class="border p-3 text-center space-x-2">
+                                <button @click="editMurid(index)" class="text-blue-600 hover:underline">Edit</button>
+                                <button @click="hapusMuridBackend(index)" class="text-red-600 hover:underline">Hapus</button>
+                            </td>
+                        </tr>
+                        <tr v-if="listMurid.length === 0">
+                            <td colspan="8" class="border p-4 text-center text-gray-400">Belum ada data murid atau sedang memuat dari cloud...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -128,16 +183,16 @@
 
         <!-- TAB 3: JURNAL SETORAN BULANAN -->
         <section v-if="currentTab === 'jurnal'" class="bg-white p-6 rounded-lg shadow">
-            <h2 class="text-xl font-bold mb-4 text-blue-800 border-b pb-2">Jurnal Setoran Bulanan</h2>
+            <h2 class="text-xl font-bold mb-4 text-blue-800 border-b pb-2">Input Jurnal Setoran Bulanan</h2>
             
-            <!-- Form Input/Edit Jurnal -->
+            <!-- Input/Edit Jurnal Form -->
             <div class="bg-gray-50 p-4 rounded-lg border mb-6">
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                     <div>
                         <label class="block text-xs font-semibold mb-1">Pilih Murid</label>
                         <select v-model="formJurnal.idMurid" @change="isiOtomatisDataMurid" class="w-full p-2 border rounded" :disabled="isEditJurnal">
                             <option value="">-- Pilih --</option>
-                            <option v-for="(m, idx) in listMurid" :key="idx" :value="idx">{{ m.nama }}</option>
+                            <option v-for="(m, idx) in listMurid" :key="idx" :value="idx">{{ m.nama }} ({{ m.kelas || 'No Class' }} - {{ m.program }})</option>
                         </select>
                     </div>
                     <div>
@@ -145,96 +200,289 @@
                         <input type="month" v-model="formJurnal.bulan" class="w-full p-2 border rounded">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Surah / Ayat Terakhir</label>
-                        <input type="text" v-model="formJurnal.surahTerakhir" class="w-full p-2 border rounded">
+                        <label class="block text-xs font-semibold mb-1">Surah / Ayat Terakhir Bulan Ini</label>
+                        <input type="text" v-model="formJurnal.surahTerakhir" placeholder="Misal: Al-Baqarah 1-50" class="w-full p-2 border rounded">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Jumlah Halaman</label>
-                        <input type="number" v-model.number="formJurnal.jumlahHalaman" class="w-full p-2 border rounded">
+                        <label class="block text-xs font-semibold mb-1">Jumlah Halaman Terhitung</label>
+                        <input type="number" v-model.number="formJurnal.jumlahHalaman" placeholder="Jumlah Halaman" class="w-full p-2 border rounded">
                     </div>
                 </div>
-                <div class="mt-4 flex justify-end space-x-2">
-                    <button v-if="isEditJurnal" @click="batalEditJurnal" class="bg-gray-400 text-white px-4 py-2 rounded">Batal</button>
+                
+                <div v-if="formJurnal.idMurid !== ''" class="mt-3 text-xs bg-blue-50 border border-blue-200 text-blue-800 p-2 rounded flex flex-wrap justify-between gap-2">
+                    <span><strong>Kelas:</strong> {{ tempInfoMurid.kelas }}</span>
+                    <span><strong>Mulai Hafalan:</strong> {{ tempInfoMurid.startHafalan }}</span>
+                    <span><strong>Tujuan Akhir:</strong> {{ tempInfoMurid.tujuanAkhir }}</span>
+                    <span><strong>Target Semester:</strong> {{ tempInfoMurid.targetHalamanSemester }} Hal</span>
+                    <span><strong>Target Bulan Ini:</strong> {{ (tempInfoMurid.targetHalamanSemester / 6).toFixed(2) }} Hal</span>
+                </div>
+
+                <div class="mt-4 flex justify-end gap-2">
+                    <button v-if="isEditJurnal" @click="batalEditJurnal" class="bg-gray-500 text-white px-5 py-2 rounded hover:bg-gray-600 transition">Batal</button>
                     <button @click="simpanJurnal" class="bg-blue-700 text-white px-5 py-2 rounded hover:bg-blue-800 transition">
-                        {{ isEditJurnal ? 'Perbarui Jurnal' : 'Simpan ke Jurnal' }}
+                        {{ isEditJurnal ? 'Update Jurnal Rekap' : 'Simpan ke Jurnal Rekap' }}
                     </button>
                 </div>
             </div>
 
-            <!-- Triple Filters & Export Single Murid -->
-            <div class="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-6 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                <div>
-                    <label class="block text-xs font-semibold mb-1 text-blue-900">Filter Bulan</label>
-                    <input type="month" v-model="filterJurnalBulan" class="w-full p-2 border rounded bg-white">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold mb-1 text-blue-900">Filter Kelas</label>
+            <!-- Triple Filter Jurnal (Kelas, Murid, Bulan) -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-6 flex flex-col md:flex-row gap-4">
+                <div class="flex-grow">
+                    <label class="block text-xs font-semibold mb-1 text-blue-900">Saring Berdasarkan Kelas</label>
                     <select v-model="filterJurnalKelas" class="w-full p-2 border rounded bg-white">
                         <option value="">Semua Kelas</option>
-                        <option v-for="k in listKelas" :value="k.nama">{{ k.nama }}</option>
+                        <option v-for="k in listKelas" :value="k.nama" :key="k.nama">{{ k.nama }}</option>
                     </select>
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold mb-1 text-blue-900">Filter Murid</label>
+                <div class="flex-grow">
+                    <label class="block text-xs font-semibold mb-1 text-blue-900">Saring Berdasarkan Murid</label>
                     <select v-model="filterJurnalMurid" class="w-full p-2 border rounded bg-white">
                         <option value="">Semua Murid</option>
-                        <option v-for="m in listMuridTerfilter" :value="m.nama">{{ m.nama }}</option>
+                        <option v-for="m in listMuridTerfilter" :value="m.nama" :key="m.nama">{{ m.nama }}</option>
                     </select>
                 </div>
-                <div>
-                    <button v-if="filterJurnalMurid" @click="eksporJurnalPerMurid" class="w-full bg-green-700 text-white p-2 rounded hover:bg-green-800 font-semibold text-xs transition">
+                <div class="flex-grow">
+                    <label class="block text-xs font-semibold mb-1 text-blue-900">Saring Berdasarkan Bulan</label>
+                    <input type="month" v-model="filterJurnalBulan" class="w-full p-2 border rounded bg-white">
+                </div>
+                <div class="flex items-end gap-2">
+                    <button @click="eksporJurnalPerMurid" class="w-full md:w-auto bg-green-700 text-white px-4 py-2 rounded font-medium hover:bg-green-800 transition" :disabled="!filterJurnalMurid">
                         📄 Ekspor Riwayat Murid
                     </button>
-                    <div v-else class="text-xs text-gray-400 text-center pb-2 italic">Pilih nama murid untuk ekspor riwayat</div>
+                    <button @click="filterJurnalBulan = ''" class="text-xs text-red-600 hover:underline mb-2">Clear Bulan</button>
                 </div>
             </div>
 
-            <!-- Tabel Jurnal -->
+            <!-- Tabel Rekap Jurnal -->
             <div class="overflow-x-auto">
                 <table class="w-full table-auto border-collapse border border-gray-200 text-left text-sm">
                     <thead>
                         <tr class="bg-gray-100">
-                            <th class="border p-3">Bulan</th><th class="border p-3">Nama</th><th class="border p-3">Kelas</th>
-                            <th class="border p-3">Surah Terakhir</th><th class="border p-3">Realisasi</th><th class="border p-3">Status</th><th class="border p-3 text-center">Aksi</th>
+                            <th class="border p-3">Bulan</th>
+                            <th class="border p-3">Nama Murid (Program)</th>
+                            <th class="border p-3">Kelas</th>
+                            <th class="border p-3">Surah / Ayat Terakhir</th>
+                            <th class="border p-3">Realisasi Bulanan</th>
+                            <th class="border p-3">Target Bulanan</th>
+                            <th class="border p-3">Status Capaian</th>
+                            <th class="border p-3 text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="(j, index) in listJurnalTerfilter" :key="index" class="hover:bg-gray-50">
-                            <td class="border p-3">{{ formatBulanIndo(j.bulan) }}</td>
-                            <td class="border p-3 font-semibold">{{ j.nama }}</td>
-                            <td class="border p-3">{{ j.kelas }}</td>
-                            <td class="border p-3 text-emerald-800">{{ j.surahTerakhir }}</td>
-                            <td class="border p-3 font-semibold">{{ j.jumlahHalaman }} Hal</td>
+                            <td class="border p-3 font-mono">{{ formatBulanIndo(j.bulan) }}</td>
+                            <td class="border p-3 font-semibold">{{ j.nama }} <span class="text-xs text-gray-500">({{ j.program }})</span></td>
+                            <td class="border p-3"><span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded font-semibold">{{ j.kelas || 'Belum Ditentukan' }}</span></td>
+                            <td class="border p-3 font-medium text-emerald-800">{{ j.surahTerakhir }}</td>
+                            <td class="border p-3 font-semibold text-blue-700">{{ j.jumlahHalaman }} Halaman</td>
+                            <td class="border p-3 text-gray-600">{{ (j.targetHalamanSemester / 6).toFixed(2) }} Halaman</td>
                             <td class="border p-3">
                                 <span :class="j.jumlahHalaman >= (j.targetHalamanSemester / 6) ? 'text-green-600 font-bold' : 'text-red-500 font-medium'">
-                                    {{ j.jumlahHalaman >= (j.targetHalamanSemester / 6) ? '🎉 Tercapai' : '📉 Belum' }}
+                                    {{ j.jumlahHalaman >= (j.targetHalamanSemester / 6) ? '🎉 Tercapai' : '📉 Belum Tercapai' }}
                                 </span>
                             </td>
                             <td class="border p-3 text-center space-x-2">
-                                <button @click="pilihEditJurnal(j.originalIndex)" class="text-blue-600 hover:underline">Edit</button>
-                                <button @click="hapusData('jurnal', j.originalIndex)" class="text-red-600 hover:underline">Hapus</button>
+                                <button @click="editJurnal(index)" class="text-blue-600 hover:underline">Edit</button>
+                                <button @click="hapusJurnalBackend(index)" class="text-red-600 hover:underline">Hapus</button>
                             </td>
+                        </tr>
+                        <tr v-if="listJurnalTerfilter.length === 0">
+                            <td colspan="8" class="border p-4 text-center text-gray-400">Tidak ada entri jurnal bulanan yang sesuai dengan filter.</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </section>
 
-        <!-- TAB 4: REKAP & STATISTIK -->
+        <!-- TAB 4: REKAP PERKEMBANGAN & STATISTIK -->
         <section v-if="currentTab === 'rekap'" class="bg-white p-6 rounded-lg shadow">
-            <div class="flex justify-between items-center mb-6 border-b pb-4">
-                <h2 class="text-xl font-bold text-blue-800">Statistik Umum</h2>
-                <button @click="renderGrafikStatistik" class="bg-indigo-700 text-white px-4 py-2 rounded text-xs">🔄 Refresh Diagram</button>
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b pb-4">
+                <div>
+                    <h2 class="text-xl font-bold text-blue-800">Rekapitulasi Perkembangan & Evaluasi</h2>
+                    <p class="text-xs text-gray-500">Analisis berkala ketercapaian target hafalan bulanan dan evaluasi satu semester penuh.</p>
+                </div>
+                <div class="flex flex-wrap gap-2 mt-4 md:mt-0">
+                    <button @click="eksporExcel" class="bg-green-700 text-white px-4 py-2 rounded text-xs hover:bg-green-800 transition flex items-center">
+                        💾 Ekspor ke Excel
+                    </button>
+                    <button @click="renderGrafikStatistik" class="bg-indigo-700 text-white px-4 py-2 rounded text-xs hover:bg-indigo-800 transition flex items-center">
+                        📊 Tampilkan & Refresh Diagram
+                    </button>
+                </div>
             </div>
-            <div class="mb-6 h-[300px] relative">
-                <canvas id="canvasChart"></canvas>
+
+            <!-- Rentang & Jenis Rekap Selector -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">1. Pilih Rentang Evaluasi</label>
+                    <div class="flex bg-gray-100 p-1 rounded-md">
+                        <button @click="rentangRekap = 'bulanan'; renderGrafikStatistik();" :class="rentangRekap === 'bulanan' ? 'bg-blue-800 text-white font-bold shadow' : 'text-gray-600 hover:text-gray-800'" class="flex-1 py-1.5 text-center text-xs rounded transition duration-150">
+                            Rekap Bulanan Berkala
+                        </button>
+                        <button @click="rentangRekap = 'semester'; renderGrafikStatistik();" :class="rentangRekap === 'semester' ? 'bg-blue-800 text-white font-bold shadow' : 'text-gray-600 hover:text-gray-800'" class="flex-1 py-1.5 text-center text-xs rounded transition duration-150">
+                            Evaluasi Akhir Semester (6 Bulan)
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">2. Pilih Model Penyajian</label>
+                    <div class="flex bg-gray-100 p-1 rounded-md">
+                        <button @click="tipeRekap = 'murid'; renderGrafikStatistik();" :class="tipeRekap === 'murid' ? 'bg-white shadow text-blue-900 font-bold' : 'text-gray-500 hover:text-gray-800'" class="flex-1 py-1.5 text-center text-xs rounded transition duration-150">
+                            Berdasarkan Murid
+                        </button>
+                        <button @click="tipeRekap = 'kelas'; renderGrafikStatistik();" :class="tipeRekap === 'kelas' ? 'bg-white shadow text-blue-900 font-bold' : 'text-gray-500 hover:text-gray-800'" class="flex-1 py-1.5 text-center text-xs rounded transition duration-150">
+                            Berdasarkan Kelas
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Statistik Ringkas -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                    <span class="text-xs font-semibold text-blue-600 uppercase">Total Entri Rekap</span>
+                    <h4 class="text-2xl font-black text-blue-800">{{ listJurnal.length }} Data</h4>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg border border-green-100">
+                    <span class="text-xs font-semibold text-green-600 uppercase">Total Akumulasi Realisasi</span>
+                    <h4 class="text-2xl font-black text-green-800">{{ hitungTotalHalamanSemua() }} Halaman</h4>
+                </div>
+                <div class="bg-purple-50 p-4 rounded-lg border border-purple-100">
+                    <span class="text-xs font-semibold text-purple-600 uppercase">Rasio Ketercapaian Terpilih</span>
+                    <h4 class="text-2xl font-black text-purple-800">{{ hitungRasioTarget() }} %</h4>
+                </div>
+            </div>
+
+            <!-- Diagram Grafik Area -->
+            <div class="bg-gray-50 p-4 rounded-lg border mb-8">
+                <h3 class="font-bold text-sm mb-4 text-gray-700 text-center">
+                    Diagram Capaian vs Target ({{ rentangRekap === 'bulanan' ? 'Bulanan' : 'Utuh 1 Semester' }}) - {{ tipeRekap === 'murid' ? 'Per Murid' : 'Per Kelas' }}
+                </h3>
+                <div class="relative w-full h-[300px] flex justify-center">
+                    <canvas id="canvasChart" class="max-w-4xl"></canvas>
+                </div>
+            </div>
+
+            <!-- TABEL 1: REKAP BULANAN -->
+            <div v-if="rentangRekap === 'bulanan'" class="overflow-x-auto">
+                <table v-if="tipeRekap === 'murid'" class="w-full table-auto border-collapse border border-gray-200 text-left text-xs">
+                    <thead>
+                        <tr class="bg-blue-900 text-white">
+                            <th class="border p-2">Bulan</th>
+                            <th class="border p-2">Nama Murid</th>
+                            <th class="border p-2">Kelas</th>
+                            <th class="border p-2">Program</th>
+                            <th class="border p-2">Realisasi Bulanan</th>
+                            <th class="border p-2">Target Bulanan</th>
+                            <th class="border p-2">Status Capaian</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(j, idx) in listJurnal" :key="idx" class="hover:bg-gray-50 border-b">
+                            <td class="p-2 border">{{ formatBulanIndo(j.bulan) }}</td>
+                            <td class="p-2 border font-semibold">{{ j.nama }}</td>
+                            <td class="p-2 border font-semibold text-blue-800">{{ j.kelas || 'Belum Ditentukan' }}</td>
+                            <td class="p-2 border">{{ j.program }}</td>
+                            <td class="p-2 border font-bold text-blue-700">{{ j.jumlahHalaman }} Hal</td>
+                            <td class="p-2 border text-gray-600">{{ (j.targetHalamanSemester / 6).toFixed(2) }} Hal</td>
+                            <td class="p-2 border">
+                                <span :class="j.jumlahHalaman >= (j.targetHalamanSemester / 6) ? 'text-green-600 font-bold' : 'text-red-500 font-medium'">
+                                    {{ j.jumlahHalaman >= (j.targetHalamanSemester / 6) ? '🎉 Tercapai' : '📉 Belum Tercapai' }}
+                                </span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <table v-if="tipeRekap === 'kelas'" class="w-full table-auto border-collapse border border-gray-200 text-left text-xs">
+                    <thead>
+                        <tr class="bg-blue-900 text-white">
+                            <th class="border p-2">Nama Kelas</th>
+                            <th class="border p-2">Jumlah Setoran</th>
+                            <th class="border p-2">Akumulasi Realisasi</th>
+                            <th class="border p-2">Akumulasi Target Bulanan</th>
+                            <th class="border p-2">Persentase Ketercapaian</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(rk, idx) in rekapPerKelasBulanan" :key="idx" class="hover:bg-gray-50 border-b">
+                            <td class="p-2 border font-bold text-gray-800">{{ rk.namaKelas }}</td>
+                            <td class="p-2 border">{{ rk.totalSetoran }} Entri</td>
+                            <td class="p-2 border font-bold text-blue-700">{{ rk.totalRealisasi.toFixed(1) }} Hal</td>
+                            <td class="p-2 border text-gray-600">{{ rk.totalTargetBulanan.toFixed(1) }} Hal</td>
+                            <td class="p-2 border font-bold text-emerald-700">{{ rk.persentase }}%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- TABEL 2: EVALUASI AKHIR SEMESTER -->
+            <div v-if="rentangRekap === 'semester'" class="overflow-x-auto">
+                <table v-if="tipeRekap === 'murid'" class="w-full table-auto border-collapse border border-gray-200 text-left text-xs">
+                    <thead>
+                        <tr class="bg-indigo-900 text-white">
+                            <th class="border p-2">Nama Murid</th>
+                            <th class="border p-2">Kelas</th>
+                            <th class="border p-2">Program</th>
+                            <th class="border p-2">Total Setoran</th>
+                            <th class="border p-2">Total Akumulasi (Semester)</th>
+                            <th class="border p-2">Target Mutlak (1 Semester)</th>
+                            <th class="border p-2">Kekurangan Hafalan</th>
+                            <th class="border p-2">Hasil Evaluasi Akhir</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(rs, idx) in rekapSemesterMurid" :key="idx" class="hover:bg-gray-50 border-b">
+                            <td class="p-2 border font-bold text-gray-800">{{ rs.nama }}</td>
+                            <td class="p-2 border font-medium text-blue-800">{{ rs.kelas }}</td>
+                            <td class="p-2 border">{{ rs.program }}</td>
+                            <td class="p-2 border text-gray-500">{{ rs.totalBulan }} Bulan</td>
+                            <td class="p-2 border font-black text-blue-700">{{ rs.totalRealisasi.toFixed(1) }} Halaman</td>
+                            <td class="p-2 border font-semibold text-purple-700">{{ rs.targetSemester }} Halaman</td>
+                            <td class="p-2 border text-red-600 font-medium">
+                                {{ rs.totalRealisasi >= rs.targetSemester ? 'Lunas / Terlampaui' : (rs.targetSemester - rs.totalRealisasi).toFixed(1) + ' Hal' }}
+                            </td>
+                            <td class="p-2 border">
+                                <span :class="rs.totalRealisasi >= rs.targetSemester ? 'bg-green-100 text-green-800 text-xs px-2 py-1 rounded font-bold' : 'bg-red-100 text-red-800 text-xs px-2 py-1 rounded font-bold'">
+                                    {{ rs.totalRealisasi >= rs.targetSemester ? '✅ LULUS EVALUASI' : '❌ BELUM LULUS' }}
+                                </span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <table v-if="tipeRekap === 'kelas'" class="w-full table-auto border-collapse border border-gray-200 text-left text-xs">
+                    <thead>
+                        <tr class="bg-indigo-900 text-white">
+                            <th class="border p-2">Nama Kelas</th>
+                            <th class="border p-2">Akumulasi Realisasi Semester</th>
+                            <th class="border p-2">Akumulasi Target Semester</th>
+                            <th class="border p-2">Persentase Ketercapaian Kelas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(rks, idx) in rekapSemesterKelas" :key="idx" class="hover:bg-gray-50 border-b">
+                            <td class="p-2 border font-bold text-gray-800">{{ rks.namaKelas }}</td>
+                            <td class="p-2 border font-bold text-blue-700">{{ rks.totalRealisasi.toFixed(1) }} Hal</td>
+                            <td class="p-2 border text-gray-600">{{ rks.totalTargetSemester.toFixed(1) }} Hal</td>
+                            <td class="p-2 border font-black text-indigo-700">{{ rks.persentase }}%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="mt-4 p-3 bg-yellow-50 rounded border border-yellow-100 text-xs text-yellow-800">
+                <strong>Catatan Evaluasi Akhir Semester:</strong> Penilaian kelulusan akhir semester dihitung secara kumulatif berdasarkan batas ketetapan minimal 1 semester: <strong>Pondok = 20 Halaman</strong> dan <strong>Reguler = 10 Halaman</strong>.
             </div>
         </section>
+
     </main>
 
-    <footer class="bg-gray-800 text-gray-300 text-center py-4 text-sm">
-        <p>© 2026. Tim ISMUBA SMA Muhammadiyah Ahmad Dahlan Metro</p>
+    <!-- FOOTER -->
+    <footer class="bg-gray-800 text-gray-300 text-center py-4 border-t border-gray-700 text-sm">
+        <p>© 2026. Dikembangkan oleh <strong>Tim ISMUBA SMA Muhammadiyah Ahmad Dahlan Metro</strong></p>
     </footer>
+
 </div>
 
 <script>
@@ -242,38 +490,45 @@
 
   createApp({
     setup() {
-      // ⚠️ MASUKKAN URL WEB APP GOOGLE APPS SCRIPT ANDA DI SINI
       const API_URL = "https://script.google.com/macros/s/AKfycbxBj-k7ADbv92k0i_oVs2UepNxKpCr_xFr_FvVS6DvR1jEBLh79AhIyyxewyseSwuKW/exec";
 
       const currentTab = ref('kelas');
+      const tipeRekap = ref('murid');
+      const rentangRekap = ref('bulanan');
       const sedangMemuat = ref(false);
+
+      const filterJurnalKelas = ref('');
+      const filterJurnalMurid = ref('');
+      const filterJurnalBulan = ref('');
       
       const listKelas = ref([]);
       const listMurid = ref([]);
       const listJurnal = ref([]);
 
-      // Filter States
-      const filterJurnalBulan = ref('');
-      const filterJurnalKelas = ref('');
-      const filterJurnalMurid = ref('');
-
-      // Form & Edit States
-      const formKelas = ref({ nama: '' });
+      // State Edit Mode
       const isEditKelas = ref(false);
-      const indexEditKelas = ref(null);
-
-      const formMurid = ref({ nama: '', kelas: '', program: '', startHafalan: '', tujuanAkhir: '', targetHalamanSemester: 0 });
+      const editKelasIndex = ref(null);
       const isEditMurid = ref(false);
-      const indexEditMurid = ref(null);
-
-      const formJurnal = ref({ idMurid: '', bulan: new Date().toISOString().substring(0, 7), surahTerakhir: '', jumlahHalaman: '' });
+      const editMuridIndex = ref(null);
       const isEditJurnal = ref(false);
-      const indexEditJurnal = ref(null);
-      const tempInfoMurid = ref({ kelas: '-', startHafalan: '-', tujuanAkhir: '-', targetHalamanSemester: 0 });
+      const editJurnalIndex = ref(null);
+
+      const formKelas = ref({ nama: '' });
+      const formMurid = ref({
+        nama: '', kelas: '', program: '', startHafalan: '', tujuanAkhir: '', targetHalamanSemester: 0
+      });
+
+      const formJurnal = ref({
+        idMurid: '', bulan: new Date().toISOString().substring(0, 7), surahTerakhir: '', jumlahHalaman: ''
+      });
+
+      const tempInfoMurid = ref({
+        kelas: '-', startHafalan: '-', tujuanAkhir: '-', targetHalamanSemester: 0
+      });
 
       let chartInstance = null;
 
-      // ================= DATABASE I/O (ONLINE SYNC) =================
+      // ================= DATA FETCHER FROM CLOUD =================
       const muatDataDariDatabase = async () => {
         if (API_URL.includes("PASTE_URL")) return;
         sedangMemuat.value = true;
@@ -284,135 +539,298 @@
           listMurid.value = hasil.murid || [];
           listJurnal.value = hasil.jurnal || [];
         } catch (error) {
-          alert("Gagal memuat database dari Cloud.");
-        } finally { sedangMemuat.value = false; }
-      };
-
-      const kirimKeDatabase = async (action, targetSheet, index, dataArray) => {
-        sedangMemuat.value = true;
-        try {
-          const respon = await fetch(API_URL, {
-            method: "POST",
-            body: JSON.stringify({ action, targetSheet, index, data: dataArray })
-          });
-          const hasil = await respon.json();
-          if (hasil.status !== "success") alert("Gagal memperbarui database Cloud: " + hasil.message);
-        } catch (error) {
-          alert("Koneksi gagal. Perubahan tidak tersimpan di Cloud.");
-        } finally { sedangMemuat.value = false; }
+          console.error("Gagal memuat database cloud:", error);
+        } finally {
+          sedangMemuat.value = false;
+        }
       };
 
       muatDataDariDatabase();
 
-      // ================= CRUD DATA KELAS =================
+      // ================= KELOLA KELAS (CRUD ONLINE) =================
+      const editKelas = (index) => {
+        isEditKelas.value = true;
+        editKelasIndex.value = index;
+        formKelas.value.nama = listKelas.value[index].nama;
+      };
+
+      const batalEditKelas = () => {
+        isEditKelas.value = false;
+        editKelasIndex.value = null;
+        formKelas.value.nama = '';
+      };
+
       const simpanKelas = async () => {
-        if (!formKelas.value.nama.trim()) return;
-        const dataPayload = [formKelas.value.nama];
+        if (!formKelas.value.nama.trim()) { alert('Nama kelas tidak boleh kosong!'); return; }
+        
+        sedangMemuat.value = true;
+        const dataBaru = {
+          action: isEditKelas.value ? "editKelas" : "tambahKelas",
+          nama: formKelas.value.nama,
+          index: editKelasIndex.value
+        };
 
+        // Optimistic Update
         if (isEditKelas.value) {
-          listKelas.value[indexEditKelas.value].nama = formKelas.value.nama;
-          await kirimKeDatabase("edit", "kelas", indexEditKelas.value, dataPayload);
-          batalEditKelas();
+          listKelas.value[editKelasIndex.value].nama = dataBaru.nama;
         } else {
-          listKelas.value.push({ nama: formKelas.value.nama });
-          await kirimKeDatabase("tambah", "kelas", null, dataPayload);
-          formKelas.value.nama = '';
+          if (listKelas.value.some(k => k.nama.toLowerCase() === formKelas.value.nama.toLowerCase())) { 
+             alert('Nama kelas sudah ada!'); sedangMemuat.value = false; return; 
+          }
+          listKelas.value.push({ nama: dataBaru.nama });
+        }
+        
+        const namaSelesai = formKelas.value.nama;
+        batalEditKelas();
+
+        try {
+          await fetch(API_URL, { method: "POST", body: JSON.stringify(dataBaru) });
+          console.log(`Kelas "${namaSelesai}" berhasil disinkronisasi ke cloud.`);
+        } catch (error) {
+          console.error(error);
+          alert('Gagal sinkronisasi data ke cloud.');
+        } finally {
+          sedangMemuat.value = false;
         }
       };
-      const pilihEditKelas = (idx) => { isEditKelas.value = true; indexEditKelas.value = idx; formKelas.value.nama = listKelas.value[idx].nama; };
-      const batalEditKelas = () => { isEditKelas.value = false; indexEditKelas.value = null; formKelas.value.nama = ''; };
 
-      // ================= CRUD DATA MURID =================
-      const updateTargetOtomatis = () => { formMurid.value.targetHalamanSemester = formMurid.value.program === 'Pondok' ? 20 : 10; };
+      const hapusKelasBackend = async (index) => {
+        if (confirm('Apakah Anda yakin ingin menghapus kelas ini secara permanen dari Cloud Spreadsheet?')) {
+          sedangMemuat.value = true;
+          const dataHapus = {
+            action: "hapusKelas",
+            index: index
+          };
+          listKelas.value.splice(index, 1);
+          try {
+            await fetch(API_URL, { method: "POST", body: JSON.stringify(dataHapus) });
+          } catch (error) {
+            console.error(error);
+            alert('Gagal menghapus data di cloud database.');
+          } finally {
+            sedangMemuat.value = false;
+          }
+        }
+      };
+
+      const updateTargetOtomatis = () => {
+        formMurid.value.targetHalamanSemester = formMurid.value.program === 'Pondok' ? 20 : formMurid.value.program === 'Reguler' ? 10 : 0;
+      };
+
+      // ================= KELOLA MURID (CRUD ONLINE) =================
+      const editMurid = (index) => {
+        isEditMurid.value = true;
+        editMuridIndex.value = index;
+        const m = listMurid.value[index];
+        formMurid.value = { ...m };
+      };
+
+      const batalEditMurid = () => {
+        isEditMurid.value = false;
+        editMuridIndex.value = null;
+        formMurid.value = { nama: '', kelas: '', program: '', startHafalan: '', tujuanAkhir: '', targetHalamanSemester: 0 };
+      };
+
       const simpanMurid = async () => {
-        if (!formMurid.value.nama || !formMurid.value.kelas) return;
-        const payload = [formMurid.value.nama, formMurid.value.kelas, formMurid.value.program, formMurid.value.startHafalan, formMurid.value.tujuanAkhir, formMurid.value.targetHalamanSemester];
-        
+        if (!formMurid.value.nama || !formMurid.value.program || !formMurid.value.kelas) {
+          alert('Lengkapi nama murid, kelas, dan program terlebih dahulu!'); return;
+        }
+
+        sedangMemuat.value = true;
+        const dataBaru = {
+          action: isEditMurid.value ? "editMurid" : "tambahMurid",
+          index: editMuridIndex.value,
+          nama: formMurid.value.nama,
+          kelas: formMurid.value.kelas,
+          program: formMurid.value.program,
+          startHafalan: formMurid.value.startHafalan || '-',
+          tujuanAkhir: formMurid.value.tujuanAkhir || '-',
+          targetHalamanSemester: formMurid.value.targetHalamanSemester
+        };
+
+        // Optimistic Update
         if (isEditMurid.value) {
-          listMurid.value[indexEditMurid.value] = { ...formMurid.value };
-          await kirimKeDatabase("edit", "murid", indexEditMurid.value, payload);
-          batalEditMurid();
+          listMurid.value[editMuridIndex.value] = { ...dataBaru };
         } else {
-          listMurid.value.push({ ...formMurid.value });
-          await kirimKeDatabase("tambah", "murid", null, payload);
-          formMurid.value = { nama: '', kelas: '', program: '', startHafalan: '', tujuanAkhir: '', targetHalamanSemester: 0 };
+          listMurid.value.push({ ...dataBaru });
         }
-      };
-      const pilihEditMurid = (idx) => { isEditMurid.value = true; indexEditMurid.value = idx; formMurid.value = { ...listMurid.value[idx] }; };
-      const batalEditMurid = () => { isEditMurid.value = false; indexEditMurid.value = null; formMurid.value = { nama: '', kelas: '', program: '', startHafalan: '', tujuanAkhir: '', targetHalamanSemester: 0 }; };
-
-      // ================= CRUD JURNAL SETORAN =================
-      const isiOtomatisDataMurid = () => {
-        if (formJurnal.value.idMurid !== '') {
-          tempInfoMurid.value = { ...listMurid.value[formJurnal.value.idMurid] };
-        }
-      };
-      const simpanJurnal = async () => {
-        if (formJurnal.value.idMurid === '' && !isEditJurnal.value) return;
         
-        let namaMurid = isEditJurnal.value ? listJurnal.value[indexEditJurnal.value].nama : listMurid.value[formJurnal.value.idMurid].nama;
-        let kelasMurid = isEditJurnal.value ? listJurnal.value[indexEditJurnal.value].kelas : listMurid.value[formJurnal.value.idMurid].kelas;
-        let progMurid = isEditJurnal.value ? listJurnal.value[indexEditJurnal.value].program : listMurid.value[formJurnal.value.idMurid].program;
-        let tgtSem = isEditJurnal.value ? listJurnal.value[indexEditJurnal.value].targetHalamanSemester : listMurid.value[formJurnal.value.idMurid].targetHalamanSemester;
+        const namaMuridSelesai = formMurid.value.nama;
+        batalEditMurid();
 
-        const payload = [formJurnal.value.bulan, namaMurid, kelasMurid, progMurid, formJurnal.value.surahTerakhir, formJurnal.value.jumlahHalaman, tgtSem];
+        try {
+          await fetch(API_URL, { method: "POST", body: JSON.stringify(dataBaru) });
+          console.log(`Murid "${namaMuridSelesai}" tersinkronisasi ke cloud.`);
+        } catch (error) {
+          console.error(error);
+          alert('Gagal menyinkronkan data murid ke cloud.');
+        } finally {
+          sedangMemuat.value = false;
+        }
+      };
+
+      const hapusMuridBackend = async (index) => {
+        if (confirm('Apakah Anda yakin ingin menghapus murid ini dari Cloud Spreadsheet?')) {
+          sedangMemuat.value = true;
+          const dataHapus = {
+            action: "hapusMurid",
+            index: index
+          };
+          listMurid.value.splice(index, 1);
+          try {
+            await fetch(API_URL, { method: "POST", body: JSON.stringify(dataHapus) });
+          } catch (error) {
+            console.error(error);
+            alert('Gagal menghapus data murid di cloud database.');
+          } finally {
+            sedangMemuat.value = false;
+          }
+        }
+      };
+
+      const isiOtomatisDataMurid = () => {
+        const id = formJurnal.value.idMurid;
+        if (id !== '' && id !== undefined) {
+            const m = listMurid.value[id];
+            if(m) {
+                tempInfoMurid.value.kelas = m.kelas || '-';
+                tempInfoMurid.value.startHafalan = m.startHafalan || '-';
+                tempInfoMurid.value.tujuanAkhir = m.tujuanAkhir || '-';
+                tempInfoMurid.value.targetHalamanSemester = m.targetHalamanSemester;
+            }
+        } else {
+            tempInfoMurid.value = { kelas: '-', startHafalan: '-', tujuanAkhir: '-', targetHalamanSemester: 0 };
+        }
+      };
+
+      // ================= JURNAL INPUT (CRUD ONLINE) =================
+      const editJurnal = (index) => {
+        // Cari index asli dari listJurnal global berdasarkan item terfilter
+        const itemTerfilter = listJurnalTerfilter.value[index];
+        const indexAsli = listJurnal.value.findIndex(j => j.nama === itemTerfilter.nama && j.bulan === itemTerfilter.bulan && j.surahTerakhir === itemTerfilter.surahTerakhir);
+        
+        if (indexAsli !== -1) {
+          isEditJurnal.value = true;
+          editJurnalIndex.value = indexAsli;
+          
+          const j = listJurnal.value[indexAsli];
+          const mIndex = listMurid.value.findIndex(m => m.nama === j.nama);
+          
+          formJurnal.value = {
+            idMurid: mIndex !== -1 ? mIndex : '',
+            bulan: j.bulan,
+            surahTerakhir: j.surahTerakhir,
+            jumlahHalaman: j.jumlahHalaman
+          };
+          isiOtomatisDataMurid();
+        }
+      };
+
+      const batalEditJurnal = () => {
+        isEditJurnal.value = false;
+        editJurnalIndex.value = null;
+        formJurnal.value = { idMurid: '', bulan: new Date().toISOString().substring(0, 7), surahTerakhir: '', jumlahHalaman: '' };
+        tempInfoMurid.value = { kelas: '-', startHafalan: '-', tujuanAkhir: '-', targetHalamanSemester: 0 };
+      };
+
+      const simpanJurnal = async () => {
+        const id = formJurnal.value.idMurid;
+        if (id === '' || !formJurnal.value.bulan || !formJurnal.value.surahTerakhir || formJurnal.value.jumlahHalaman === '') {
+            alert('Lengkapi semua field input jurnal!'); return;
+        }
+        
+        sedangMemuat.value = true;
+        const m = listMurid.value[id];
+        
+        const dataBaru = {
+          action: isEditJurnal.value ? "editJurnal" : "tambahJurnal",
+          index: editJurnalIndex.value,
+          bulan: formJurnal.value.bulan,
+          nama: m.nama,
+          kelas: m.kelas,
+          program: m.program,
+          surahTerakhir: formJurnal.value.surahTerakhir,
+          jumlahHalaman: formJurnal.value.jumlahHalaman,
+          targetHalamanSemester: m.targetHalamanSemester
+        };
 
         if (isEditJurnal.value) {
-          listJurnal.value[indexEditJurnal.value] = { bulan: payload[0], nama: payload[1], kelas: payload[2], program: payload[3], surahTerakhir: payload[4], jumlahHalaman: payload[5], targetHalamanSemester: payload[6] };
-          await kirimKeDatabase("edit", "jurnal", indexEditJurnal.value, payload);
-          batalEditJurnal();
+          listJurnal.value[editJurnalIndex.value] = { ...dataBaru };
         } else {
-          listJurnal.value.push({ bulan: payload[0], nama: payload[1], kelas: payload[2], program: payload[3], surahTerakhir: payload[4], jumlahHalaman: payload[5], targetHalamanSemester: payload[6] });
-          await kirimKeDatabase("tambah", "jurnal", null, payload);
-          formJurnal.value.idMurid = ''; formJurnal.value.surahTerakhir = ''; formJurnal.value.jumlahHalaman = '';
+          listJurnal.value.push({ ...dataBaru });
         }
-      };
-      const pilihEditJurnal = (idx) => {
-        isEditJurnal.value = true; indexEditJurnal.value = idx;
-        const j = listJurnal.value[idx];
-        formJurnal.value.bulan = j.bulan;
-        formJurnal.value.surahTerakhir = j.surahTerakhir;
-        formJurnal.value.jumlahHalaman = j.jumlahHalaman;
-      };
-      const batalEditJurnal = () => { isEditJurnal.value = false; indexEditJurnal.value = null; formJurnal.value.idMurid = ''; formJurnal.value.surahTerakhir = ''; formJurnal.value.jumlahHalaman = ''; };
+        
+        batalEditJurnal();
 
-      // ================= GLOBAL HAPUS DATA ONLINE =================
-      const hapusData = async (sheetTarget, idx) => {
-        if (confirm(`Apakah Anda yakin ingin menghapus data ${sheetTarget} ini dari Cloud secara permanen?`)) {
-          if (sheetTarget === 'kelas') listKelas.value.splice(idx, 1);
-          if (sheetTarget === 'murid') listMurid.value.splice(idx, 1);
-          if (sheetTarget === 'jurnal') listJurnal.value.splice(idx, 1);
-          
-          await kirimKeDatabase("hapus", sheetTarget, idx, []);
+        try {
+          await fetch(API_URL, { method: "POST", body: JSON.stringify(dataBaru) });
+          console.log("Data jurnal berhasil disinkronisasi ke cloud.");
+        } catch (error) {
+          console.error(error);
+          alert('Gagal menyimpan data jurnal ke cloud.');
+        } finally {
+          sedangMemuat.value = false;
         }
       };
 
-      // ================= FILTERS & EKSPOR PER-MURID =================
+      const hapusJurnalBackend = async (index) => {
+        const itemTerfilter = listJurnalTerfilter.value[index];
+        const indexAsli = listJurnal.value.findIndex(j => j.nama === itemTerfilter.nama && j.bulan === itemTerfilter.bulan && j.surahTerakhir === itemTerfilter.surahTerakhir);
+        
+        if (indexAsli !== -1 && confirm('Hapus entri jurnal ini dari Cloud Spreadsheet secara permanen?')) {
+          sedangMemuat.value = true;
+          const dataHapus = {
+            action: "hapusJurnal",
+            index: indexAsli
+          };
+          listJurnal.value.splice(indexAsli, 1);
+          try {
+            await fetch(API_URL, { method: "POST", body: JSON.stringify(dataHapus) });
+          } catch (error) {
+            console.error(error);
+            alert('Gagal menghapus entri jurnal di cloud database.');
+          } finally {
+            sedangMemuat.value = false;
+          }
+        }
+      };
+
+      // ================= FILTERS & COMPUTEDS (BULAN FILTER) =================
       const listMuridTerfilter = computed(() => {
         if (!filterJurnalKelas.value) return listMurid.value;
         return listMurid.value.filter(m => m.kelas === filterJurnalKelas.value);
       });
 
       const listJurnalTerfilter = computed(() => {
-        return listJurnal.value.map((j, index) => ({ ...j, originalIndex: index })).filter(j => {
-          const cocokBulan = !filterJurnalBulan.value || j.bulan === filterJurnalBulan.value;
-          const cocokKelas = !filterJurnalKelas.value || j.kelas === filterJurnalKelas.value;
-          const cocokMurid = !filterJurnalMurid.value || j.nama === filterJurnalMurid.value;
-          return cocokBulan && cocokKelas && cocokMurid;
+        return listJurnal.value.filter(j => {
+            const cocokKelas = !filterJurnalKelas.value || j.kelas === filterJurnalKelas.value;
+            const cocokMurid = !filterJurnalMurid.value || j.nama === filterJurnalMurid.value;
+            const cocokBulan = !filterJurnalBulan.value || j.bulan === filterJurnalBulan.value;
+            return cocokKelas && cocokMurid && cocokBulan;
         });
       });
 
+      // ================= EKSPOR JURNAL PER MURID =================
       const eksporJurnalPerMurid = () => {
-        if (!filterJurnalMurid.value) return;
-        const dataHistory = listJurnal.value.filter(j => j.nama === filterJurnalMurid.value).map(j => ({
-          'Bulan': formatBulanIndo(j.bulan), 'Nama Murid': j.nama, 'Kelas': j.kelas, 'Program': j.program,
-          'Setoran Terakhir': j.surahTerakhir, 'Realisasi (Halaman)': j.jumlahHalaman, 'Target Bulanan': (j.targetHalamanSemester / 6).toFixed(2)
+        if (!filterJurnalMurid.value) { alert('Silakan pilih murid terlebih dahulu pada filter!'); return; }
+        const dataMurid = listJurnal.value.filter(j => j.nama === filterJurnalMurid.value);
+        if (dataMurid.length === 0) { alert('Tidak ada riwayat setoran untuk murid ini.'); return; }
+
+        const dataSheet = dataMurid.map(j => ({
+            'Bulan': formatBulanIndo(j.bulan),
+            'Nama Murid': j.nama,
+            'Kelas': j.kelas,
+            'Program': j.program,
+            'Surah / Ayat Terakhir': j.surahTerakhir,
+            'Realisasi (Halaman)': j.jumlahHalaman,
+            'Target Bulanan': (j.targetHalamanSemester / 6).toFixed(2),
+            'Status': j.jumlahHalaman >= (j.targetHalamanSemester / 6) ? 'Tercapai' : 'Belum Tercapai'
         }));
-        
-        const worksheet = XLSX.utils.json_to_sheet(dataHistory);
+
+        const worksheet = XLSX.utils.json_to_sheet(dataSheet);
         const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Riwayat Hafalan');
-        XLSX.writeFile(workbook, `Jurnal_${filterJurnalMurid.value}.xlsx`);
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Riwayat Setoran');
+        XLSX.writeFile(workbook, `Riwayat_Setoran_${filterJurnalMurid.value.replace(/\s+/g, '_')}.xlsx`);
       };
 
       const formatBulanIndo = (valBulan) => {
@@ -422,30 +840,200 @@
         return `${namaBulan[parseInt(parts[1]) - 1]} ${parts[0]}`;
       };
 
+      const rekapSemesterMurid = computed(() => {
+        const mapMurid = {};
+        listMurid.value.forEach(m => {
+            mapMurid[m.nama] = { nama: m.nama, kelas: m.kelas, program: m.program, totalRealisasi: 0, targetSemester: m.targetHalamanSemester, totalBulan: 0 };
+        });
+        listJurnal.value.forEach(j => {
+            if (mapMurid[j.nama]) {
+                mapMurid[j.nama].totalRealisasi += Number(j.jumlahHalaman || 0);
+                mapMurid[j.nama].totalBulan += 1;
+            }
+        });
+        return Object.values(mapMurid);
+      });
+
+      const rekapSemesterKelas = computed(() => {
+        const mapKelas = {};
+        listKelas.value.forEach(k => { mapKelas[k.nama] = { namaKelas: k.nama, totalRealisasi: 0, totalTargetSemester: 0 }; });
+        rekapSemesterMurid.value.forEach(rm => {
+            if (!mapKelas[rm.kelas]) { mapKelas[rm.kelas] = { namaKelas: rm.kelas, totalRealisasi: 0, totalTargetSemester: 0 }; }
+            mapKelas[rm.kelas].totalRealisasi += rm.totalRealisasi;
+            mapKelas[rm.kelas].totalTargetSemester += rm.targetSemester;
+        });
+        return Object.values(mapKelas).map(item => {
+            const persentase = item.totalTargetSemester > 0 ? Math.round((item.totalRealisasi / item.totalTargetSemester) * 100) : 0;
+            return { ...item, persentase };
+        });
+      });
+
+      const rekapPerKelasBulanan = computed(() => {
+        const mapKelas = {};
+        listKelas.value.forEach(k => { mapKelas[k.nama] = { namaKelas: k.nama, totalSetoran: 0, totalRealisasi: 0, totalTargetBulanan: 0 }; });
+        listJurnal.value.forEach(j => {
+            const namaK = j.kelas || 'Belum Ditentukan';
+            if (!mapKelas[namaK]) { mapKelas[namaK] = { namaKelas: namaK, totalSetoran: 0, totalRealisasi: 0, totalTargetBulanan: 0 }; }
+            mapKelas[namaK].totalSetoran += 1; 
+            mapKelas[namaK].totalRealisasi += Number(j.jumlahHalaman || 0); 
+            mapKelas[namaK].totalTargetBulanan += (Number(j.targetHalamanSemester || 0) / 6);
+        });
+        return Object.values(mapKelas).map(item => {
+            const persentase = item.totalTargetBulanan > 0 ? Math.round((item.totalRealisasi / item.totalTargetBulanan) * 100) : 0;
+            return { ...item, persentase };
+        });
+      });
+
+      const hitungTotalHalamanSemua = () => listJurnal.value.reduce((acc, curr) => acc + Number(curr.jumlahHalaman || 0), 0).toFixed(1);
+
+      const hitungRasioTarget = () => {
+        if (listJurnal.value.length === 0) return 0;
+        if (rentangRekap.value === 'bulanan') {
+            const tercapai = listJurnal.value.filter(j => Number(j.jumlahHalaman) >= (Number(j.targetHalamanSemester) / 6)).length;
+            return Math.round((tercapai / listJurnal.value.length) * 100);
+        } else {
+            if (listMurid.value.length === 0) return 0;
+            const lulus = rekapSemesterMurid.value.filter(rm => rm.totalRealisasi >= rm.targetSemester).length;
+            return Math.round((lulus / listMurid.value.length) * 100);
+        }
+      };
+
+      // ================= VISUALISASI CHART =================
       const renderGrafikStatistik = () => {
         nextTick(() => {
-          const ctx = document.getElementById('canvasChart'); if (!ctx) return;
-          if (chartInstance) chartInstance.destroy();
-          chartInstance = new Chart(ctx, {
-            type: 'bar',
-            data: {
-              labels: listJurnal.value.slice(-10).map(j => j.nama),
-              datasets: [{ label: 'Realisasi Halaman', data: listJurnal.value.slice(-10).map(j => j.jumlahHalaman), backgroundColor: '#1e3a8a' }]
+            const ctx = document.getElementById('canvasChart');
+            if (!ctx) return;
+            if (chartInstance) { chartInstance.destroy(); }
+
+            let labels = []; let dataRealisasi = []; let dataTarget = [];
+            let label1 = '', label2 = '';
+
+            if (rentangRekap.value === 'bulanan') {
+                label1 = 'Realisasi Bulanan (Halaman)'; label2 = 'Target Bulanan Proporsional';
+                if (tipeRekap.value === 'murid') {
+                    labels = listJurnal.value.map(j => `${j.nama} (${formatBulanIndo(j.bulan)})`);
+                    dataRealisasi = listJurnal.value.map(j => j.jumlahHalaman);
+                    dataTarget = listJurnal.value.map(j => (j.targetHalamanSemester / 6).toFixed(2));
+                } else {
+                    labels = rekapPerKelasBulanan.value.map(rk => rk.namaKelas);
+                    dataRealisasi = rekapPerKelasBulanan.value.map(rk => rk.totalRealisasi.toFixed(1));
+                    dataTarget = rekapPerKelasBulanan.value.map(rk => rk.totalTargetBulanan.toFixed(1));
+                }
+            } else {
+                label1 = 'Total Realisasi Semester'; label2 = 'Target Mutlak 1 Semester';
+                if (tipeRekap.value === 'murid') {
+                    labels = rekapSemesterMurid.value.map(rm => rm.nama);
+                    dataRealisasi = rekapSemesterMurid.value.map(rm => rm.totalRealisasi);
+                    dataTarget = rekapSemesterMurid.value.map(rm => rm.targetSemester);
+                } else {
+                    labels = rekapSemesterKelas.value.map(rks => rks.namaKelas);
+                    dataRealisasi = rekapSemesterKelas.value.map(rks => rks.totalRealisasi);
+                    dataTarget = rekapSemesterKelas.value.map(rks => rks.totalTargetSemester);
+                }
             }
-          });
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: label1, data: dataRealisasi, backgroundColor: 'rgba(59, 130, 246, 0.75)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1 },
+                        { label: label2, data: dataTarget, backgroundColor: 'rgba(99, 102, 241, 0.55)', borderColor: 'rgba(99, 102, 241, 1)', borderWidth: 1 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
         });
       };
 
-      const tabClass = (tabName) => currentTab.value === tabName ? "bg-white text-blue-900 px-4 py-2 rounded text-xs font-bold" : "bg-blue-700 text-blue-100 px-4 py-2 rounded text-xs font-bold hover:bg-blue-600";
+      // ================= EXPORT & IMPORT EXCEL =================
+      const eksporExcel = () => {
+        if (listJurnal.value.length === 0) { alert('Tidak ada data untuk diekspor!'); return; }
+        let dataSheet = [];
+        let sheetName = `Rekap_${rentangRekap.value}_${tipeRekap.value}`;
+
+        if (rentangRekap.value === 'bulanan') {
+            if (tipeRekap.value === 'murid') {
+                dataSheet = listJurnal.value.map(j => ({
+                    'Bulan': formatBulanIndo(j.bulan), 'Nama Murid': j.nama, 'Kelas': j.kelas,
+                    'Realisasi (Halaman)': j.jumlahHalaman, 'Target Bulanan': (j.targetHalamanSemester / 6).toFixed(2)
+                }));
+            } else {
+                dataSheet = rekapPerKelasBulanan.value.map(rk => ({
+                    'Nama Kelas': rk.namaKelas, 'Total Realisasi': rk.totalRealisasi, 'Total Target Bulanan': rk.totalTargetBulanan, 'Persentase': rk.persentase + '%'
+                }));
+            }
+        } else {
+            if (tipeRekap.value === 'murid') {
+                dataSheet = rekapSemesterMurid.value.map(rs => ({
+                    'Nama Murid': rs.nama, 'Kelas': rs.kelas, 'Program': rs.program,
+                    'Total Halaman Semester': rs.totalRealisasi, 'Target Mutlak Semester': rs.targetSemester,
+                    'Status Kelulusan': rs.totalRealisasi >= rs.targetSemester ? 'LULUS' : 'BELUM LULUS'
+                }));
+            } else {
+                dataSheet = rekapSemesterKelas.value.map(rks => ({
+                    'Nama Kelas': rks.namaKelas, 'Total Realisasi Kelas': rks.totalRealisasi, 'Total Target Semester': rks.totalTargetSemester, 'Ketercapaian': rks.persentase + '%'
+                }));
+            }
+        }
+
+        const worksheet = XLSX.utils.json_to_sheet(dataSheet);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Rekap');
+        XLSX.writeFile(workbook, `${sheetName}_${new Date().getFullYear()}.xlsx`);
+      };
+
+      const importExcel = (event) => {
+        const file = event.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+            const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+            jsonData.forEach(async (row) => {
+                const nama = row['Nama'] || row['nama']; 
+                const kelas = (row['Kelas'] || row['kelas'] || '').toString();
+                let program = (row['Program'] || row['program'] || '').toString().toLowerCase().includes('pondok') ? 'Pondok' : 'Reguler';
+                
+                if (kelas && !listKelas.value.some(k => k.nama.toLowerCase() === kelas.toLowerCase())) {
+                    listKelas.value.push({ nama: kelas });
+                }
+                if (nama) {
+                    const dataMuridBaru = {
+                      action: "tambahMurid",
+                      nama, kelas, program,
+                      startHafalan: row['StartHafalan'] || '-',
+                      tujuanAkhir: row['TujuanAkhir'] || '-',
+                      targetHalamanSemester: program === 'Pondok' ? 20 : 10
+                    };
+                    listMurid.value.push(dataMuridBaru);
+                    try {
+                      await fetch(API_URL, { method: "POST", body: JSON.stringify(dataMuridBaru) });
+                    } catch(e) { console.error("Gagal sync murid impor", e); }
+                }
+            });
+            alert('Proses impor masal berhasil diproses ke antrean layar!'); 
+            event.target.value = '';
+        };
+        reader.readAsArrayBuffer(file);
+      };
+
+      const tabClass = (tabName) => {
+        const base = "px-4 py-2 rounded text-xs font-bold transition duration-200 ";
+        return currentTab.value === tabName ? base + "bg-white text-blue-900 shadow" : base + "bg-blue-700 text-blue-100 hover:bg-blue-600 hover:text-white";
+      };
 
       return {
-        currentTab, sedangMemuat, listKelas, listMurid, listJurnal, listMuridTerfilter, listJurnalTerfilter,
-        filterJurnalBulan, filterJurnalKelas, filterJurnalMurid, formKelas, isEditKelas, formMurid, isEditMurid, formJurnal, isEditJurnal, tempInfoMurid,
-        simpanKelas, pilihEditKelas, batalEditKelas, updateTargetOtomatis, simpanMurid, pilihEditMurid, batalEditMurid,
-        isiOtomatisDataMurid, simpanJurnal, pilihEditJurnal, batalEditJurnal, hapusData, eksporJurnalPerMurid, formatBulanIndo, renderGrafikStatistik, tabClass
+        currentTab, tipeRekap, rentangRekap, sedangMemuat, filterJurnalKelas, filterJurnalMurid, filterJurnalBulan, listKelas, listMurid, listJurnal,
+        listMuridTerfilter, listJurnalTerfilter, rekapSemesterMurid, rekapSemesterKelas, rekapPerKelasBulanan,
+        formKelas, formMurid, formJurnal, tempInfoMurid, updateTargetOtomatis, isiOtomatisDataMurid, formatBulanIndo, importExcel,
+        eksporExcel, hitungTotalHalamanSemua, hitungRasioTarget, renderGrafikStatistik, tabClass,
+        isEditKelas, editKelas, batalEditKelas, simpanKelas, hapusKelasBackend,
+        isEditMurid, editMurid, batalEditMurid, simpanMurid, hapusMuridBackend,
+        isEditJurnal, editJurnal, batalEditJurnal, simpanJurnal, hapusJurnalBackend, eksporJurnalPerMurid
       };
     }
   }).mount('#app');
 </script>
+
 </body>
 </html>
