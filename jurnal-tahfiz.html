@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jurnal Tahfiz - SMA Muhammadiyah Ahmad Dahlan Kota Metro</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<style>
+:root {
+  --primary-blue: #0d4f8b; --primary-blue-dark: #0a3a68; --primary-blue-light: #2563eb;
+  --primary-blue-soft: #e0ebf5; --accent-orange: #f97316; --accent-orange-dark: #ea580c;
+  --accent-orange-light: #fbbf24; --accent-orange-soft: #fff3e0; --text-dark: #1e293b; --text-muted: #64748b;
+}
+* { font-family: 'Poppins', sans-serif; }
+body { background: linear-gradient(135deg, #f0f4f8 0%, #fef3e2 100%); min-height: 100vh; color: var(--text-dark); }
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cpath d='M40 0 L50 30 L80 40 L50 50 L40 80 L30 50 L0 40 L30 30 Z' fill='none' stroke='%230d4f8b' stroke-width='0.5' opacity='0.25'/%3E%3Ccircle cx='40' cy='40' r='5' fill='none' stroke='%23f97316' stroke-width='0.5' opacity='0.25'/%3E%3C/svg%3E");
+  opacity: 0.5; pointer-events: none; z-index: 0;
+}
+main, header, nav, footer { position: relative; z-index: 1; }
+.font-arabic { font-family: 'Amiri', serif; }
+
+#loginOverlay {
+  position: fixed; inset: 0; background: rgba(10, 58, 104, 0.95); z-index: 9998;
+  display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);
+}
+.login-box {
+  background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  width: 100%; max-width: 400px; text-align: center; position: relative; overflow: hidden;
+}
+.login-box::before { content:''; position:absolute; top:0; left:0; right:0; height:10px; background: linear-gradient(90deg, var(--primary-blue) 0%, var(--accent-orange) 100%); }
+
+.header-gradient { background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 60%, var(--primary-blue) 100%); position: relative; overflow: hidden; }
+.header-pattern { position: absolute; inset: 0; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cpath d='M30 0 L37 23 L60 30 L37 37 L30 60 L23 37 L0 30 L23 23 Z' fill='none' stroke='white' stroke-width='0.8' opacity='0.12'/%3E%3C/svg%3E"); }
+.header-decoration { position: absolute; right: -60px; top: -60px; width: 220px; height: 220px; background: radial-gradient(circle, rgba(249,115,22,0.35) 0%, transparent 70%); border-radius: 50%; }
+.header-decoration-2 { position: absolute; left: -40px; bottom: -40px; width: 150px; height: 150px; background: radial-gradient(circle, rgba(251,191,36,0.2) 0%, transparent 70%); border-radius: 50%; }
+
+.btn-tab { background: transparent; border: none; color: var(--text-muted); font-weight: 500; border-bottom: 3px solid transparent; margin-bottom: -3px; padding: 12px 18px; transition: all 0.3s; border-radius: 8px 8px 0 0; display: flex; align-items: center; gap: 8px; white-space: nowrap; cursor: pointer; }
+.btn-tab:hover { color: var(--accent-orange); background: var(--accent-orange-soft); }
+.btn-tab.active { color: white; background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-light) 100%); border-bottom: 3px solid var(--accent-orange); font-weight: 600; border-radius: 8px; }
+.app-tab { animation: fadeIn 0.4s ease; }
+
+.btn-primary-blue { background: var(--primary-blue); border-color: var(--primary-blue); color: white; font-weight: 500; }
+.btn-primary-blue:hover { background: var(--primary-blue-dark); border-color: var(--primary-blue-dark); color: white; }
+.btn-accent-orange { background: var(--accent-orange); border-color: var(--accent-orange); color: white; font-weight: 500; }
+.btn-accent-orange:hover { background: var(--accent-orange-dark); border-color: var(--accent-orange-dark); color: white; }
+.btn-outline-blue { border-color: var(--primary-blue); color: var(--primary-blue); background: white; }
+.btn-outline-blue:hover { background: var(--primary-blue); color: white; }
+.btn-outline-orange { border-color: var(--accent-orange); color: var(--accent-orange); background: white; }
+.btn-outline-orange:hover { background: var(--accent-orange); color: white; }
+
+.card-custom { border: none; border-radius: 16px; box-shadow: 0 4px 20px rgba(13,79,139,0.08); background: white; overflow: hidden; }
+.card-header-custom { background: linear-gradient(135deg, var(--primary-blue-soft) 0%, white 100%); border-bottom: 2px solid var(--primary-blue-soft); padding: 16px 20px; font-weight: 600; color: var(--primary-blue); display: flex; align-items: center; gap: 10px; justify-content: space-between; flex-wrap: wrap; }
+
+.stat-card { border-radius: 16px; padding: 20px; color: white; position: relative; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); height: 100%; }
+.stat-card.blue { background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-light) 100%); }
+.stat-card.orange { background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-light) 100%); }
+.stat-card.green { background: linear-gradient(135deg, #059669 0%, #34d399 100%); }
+.stat-card.purple { background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%); }
+.stat-card::before { content: ''; position: absolute; top: -30px; right: -30px; width: 120px; height: 120px; background: rgba(255,255,255,0.12); border-radius: 50%; }
+.stat-card::after { content: ''; position: absolute; bottom: -20px; right: 30px; width: 80px; height: 80px; background: rgba(255,255,255,0.08); border-radius: 50%; }
+.stat-icon { font-size: 2.5rem; opacity: 0.85; position: relative; z-index: 1; }
+.stat-value { font-size: 2rem; font-weight: 700; margin: 0; position: relative; z-index: 1; }
+.stat-label { font-size: 0.85rem; opacity: 0.9; margin: 0; position: relative; z-index: 1; }
+
+.table-custom { border-radius: 12px; overflow: hidden; margin: 0; }
+.table-custom thead { background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-light) 100%); color: white; }
+.table-custom thead th { border: none; font-weight: 500; padding: 12px 16px; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.5px; }
+.table-custom tbody tr { border-bottom: 1px solid #e2e8f0; transition: background 0.2s; }
+.table-custom tbody tr:hover { background: var(--primary-blue-soft); }
+.table-custom tbody td { padding: 12px 16px; vertical-align: middle; font-size: 0.875rem; }
+
+.badge-program-pondok { background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dark) 100%); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.72rem; font-weight: 500; }
+.badge-program-reguler { background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-light) 100%); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.72rem; font-weight: 500; }
+
+.searchable-select { position: relative; }
+.searchable-select .dropdown-options { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #e2e8f0; border-radius: 8px; max-height: 250px; overflow-y: auto; z-index: 1050; box-shadow: 0 4px 12px rgba(0,0,0,0.12); display: none; }
+.searchable-select .dropdown-options.show { display: block; }
+.searchable-select .dropdown-option { padding: 10px 16px; cursor: pointer; border-bottom: 1px solid #f1f5f9; transition: background 0.2s; font-size: 0.875rem; }
+.searchable-select .dropdown-option:hover { background: var(--primary-blue-soft); }
+.searchable-select .dropdown-option:last-child { border-bottom: none; }
+
+.modal-content { border: none; border-radius: 16px; overflow: hidden; }
+.modal-header { background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-light) 100%); color: white; border: none; padding: 16px 24px; }
+.modal-header .btn-close { filter: invert(1); }
+.modal-body { padding: 24px; }
+.modal-footer { border: none; padding: 16px 24px; background: #f8fafc; }
+
+.form-label { font-weight: 500; color: var(--text-dark); margin-bottom: 6px; font-size: 0.85rem; }
+.form-control, .form-select { border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 0.875rem; transition: all 0.2s; }
+.form-control:focus, .form-select:focus { border-color: var(--primary-blue); box-shadow: 0 0 0 3px rgba(13,79,139,0.1); }
+
+.footer-custom { background: linear-gradient(135deg, var(--primary-blue-dark) 0%, var(--primary-blue) 100%); color: white; padding: 24px 0; margin-top: 50px; position: relative; overflow: hidden; }
+.footer-pattern { position: absolute; inset: 0; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M20 0 L25 15 L40 20 L25 25 L20 40 L15 25 L0 20 L15 15 Z' fill='none' stroke='white' stroke-width='0.5' opacity='0.1'/%3E%3C/svg%3E"); }
+
+.toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+.toast-custom { background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); padding: 14px 20px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; min-width: 300px; border-left: 4px solid var(--primary-blue); animation: slideIn 0.3s ease; }
+.toast-custom.success { border-left-color: #059669; }
+.toast-custom.error { border-left-color: #dc2626; }
+.toast-custom.warning { border-left-color: var(--accent-orange); }
+.toast-custom.info { border-left-color: var(--primary-blue); }
+@keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+.empty-state { text-align: center; padding: 50px 20px; color: var(--text-muted); }
+.empty-state i { font-size: 3.5rem; color: var(--primary-blue-soft); margin-bottom: 16px; display: block; }
+.filter-bar { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 20px; }
+.progress-custom { height: 8px; border-radius: 4px; background: #e2e8f0; overflow: hidden; }
+.progress-custom .progress-bar { background: linear-gradient(90deg, var(--accent-orange) 0%, var(--accent-orange-light) 100%); border-radius: 4px; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.table-responsive { border-radius: 12px; }
+.btn-action { padding: 4px 10px; font-size: 0.78rem; border-radius: 6px; margin: 0 2px; }
+.logo-container { width: 56px; height: 56px; background: white; border-radius: 50%; padding: 6px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.15); flex-shrink: 0; }
+.scrollable-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.scrollable-tabs::-webkit-scrollbar { height: 4px; }
+.scrollable-tabs::-webkit-scrollbar-thumb { background: var(--primary-blue-soft); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN OVERLAY -->
+<div id="loginOverlay">
+  <div class="login-box">
+    <div class="logo-container mx-auto mb-3" style="width:70px; height:70px;">
+      <img src="https://upload.wikimedia.org/wikipedia/id/thumb/8/88/Lambang_Muhammadiyah.svg/120px-Lambang_Muhammadiyah.svg.png" style="width:100%; height:100%; object-fit:contain;" onerror="this.style.display='none'">
+    </div>
+    <h5 class="fw-bold text-primary mb-1">Login Admin</h5>
+    <p class="text-muted mb-4" style="font-size:0.85rem;">Jurnal Tahfiz SMA MUAD Metro</p>
+    <input type="text" id="loginUser" class="form-control mb-2 text-center" placeholder="Username">
+    <input type="password" id="loginPass" class="form-control mb-3 text-center" placeholder="Password">
+    <button class="btn btn-primary-blue w-100" onclick="doLogin()"><i class="bi bi-box-arrow-in-right"></i> Masuk</button>
+    <!--<p class="text-muted mt-3" style="font-size:0.75rem;"><i class="bi bi-info-circle"></i> Default: admin / admin123</p> -->
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<header class="header-gradient text-white shadow-lg">
+  <div class="header-pattern"></div><div class="header-decoration"></div><div class="header-decoration-2"></div>
+  <div class="container py-3">
+    <div class="d-flex align-items-center gap-3">
+      <div class="logo-container">
+        <img src="https://upload.wikimedia.org/wikipedia/id/thumb/8/88/Lambang_Muhammadiyah.svg/120px-Lambang_Muhammadiyah.svg.png" style="width:100%; height:100%; object-fit:contain;" onerror="this.style.display='none'">
+      </div>
+      <div class="flex-grow-1">
+        <h5 class="mb-0 fw-bold">Jurnal Tahfiz Al-Qur'an</h5>
+        <p class="mb-0 opacity-75" style="font-size:0.82rem;">SMA Muhammadiyah Ahmad Dahlan Kota Metro</p>
+      </div>
+      <div class="d-none d-lg-block text-end">
+        <p class="mb-0 font-arabic" style="font-size:1.1rem; opacity:0.9;">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
+        <button class="btn btn-sm btn-outline-light mt-2 d-none" id="btnLogout" onclick="doLogout()"><i class="bi bi-box-arrow-right"></i> Logout</button>
+      </div>
+      <button class="btn btn-sm btn-outline-light d-lg-none d-none" id="btnLogoutMobile" onclick="doLogout()"><i class="bi bi-box-arrow-right"></i></button>
+    </div>
+  </div>
+</header>
+
+<nav class="bg-white shadow-sm sticky-top">
+  <div class="container">
+    <div class="d-flex gap-2 py-2 scrollable-tabs">
+      <button type="button" class="btn-tab active" data-tab="kelas" onclick="switchTab('kelas')"><i class="bi bi-building"></i><span>Kelola Kelas</span></button>
+      <button type="button" class="btn-tab" data-tab="murid" onclick="switchTab('murid')"><i class="bi bi-people"></i><span>Murid & Target</span></button>
+      <button type="button" class="btn-tab" data-tab="jurnal" onclick="switchTab('jurnal')"><i class="bi bi-journal-text"></i><span>Jurnal Setoran</span></button>
+      <button type="button" class="btn-tab" data-tab="rekap" onclick="switchTab('rekap')"><i class="bi bi-graph-up-arrow"></i><span>Rekap & Statistik</span></button>
+    </div>
+  </div>
+</nav>
+
+<main class="container my-4">
+  <div id="tab-kelas" class="app-tab">
+    <div class="card-custom">
+      <div class="card-header-custom">
+        <div><i class="bi bi-building"></i> Kelola Kelas</div>
+        <div class="d-flex gap-2 flex-wrap d-none" id="kelasActions">
+          <button class="btn btn-outline-blue btn-sm" onclick="downloadTemplateKelas()"><i class="bi bi-download"></i> Template Excel</button>
+          <button class="btn btn-outline-orange btn-sm" onclick="document.getElementById('importKelasFile').click()"><i class="bi bi-upload"></i> Import Excel</button>
+          <input type="file" id="importKelasFile" accept=".xlsx,.xls" class="d-none" onchange="importKelas(event)">
+          <button class="btn btn-accent-orange btn-sm" onclick="openModalKelas()"><i class="bi bi-plus-circle"></i> Tambah Kelas</button>
+        </div>
+      </div>
+      <div class="card-body p-3">
+        <div class="filter-bar">
+          <div class="row g-2 align-items-center">
+            <div class="col-md-8"><input type="text" class="form-control" id="searchKelas" placeholder="Cari nama kelas..." oninput="renderKelas()"></div>
+            <div class="col-md-4 text-md-end"><small class="text-muted">Total: <strong id="totalKelas">0</strong> kelas</small></div>
+          </div>
+        </div>
+        <div class="table-responsive" id="tableKelas"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-murid" class="app-tab d-none">
+    <div class="card-custom">
+      <div class="card-header-custom">
+        <div><i class="bi bi-people"></i> Kelola Murid & Target Hafalan</div>
+        <div class="d-flex gap-2 flex-wrap d-none" id="muridActions">
+          <button class="btn btn-outline-blue btn-sm" onclick="downloadTemplateMurid()"><i class="bi bi-download"></i> Template Excel</button>
+          <button class="btn btn-outline-orange btn-sm" onclick="document.getElementById('importMuridFile').click()"><i class="bi bi-upload"></i> Import Excel</button>
+          <input type="file" id="importMuridFile" accept=".xlsx,.xls" class="d-none" onchange="importMurid(event)">
+          <button class="btn btn-accent-orange btn-sm" onclick="openModalMurid()"><i class="bi bi-plus-circle"></i> Tambah Murid</button>
+        </div>
+      </div>
+      <div class="card-body p-3">
+        <div class="filter-bar">
+          <div class="row g-2 align-items-center">
+            <div class="col-md-3"><select class="form-select" id="filterMuridKelas" onchange="renderMurid()"><option value="">Semua Kelas</option></select></div>
+            <div class="col-md-3"><select class="form-select" id="filterMuridProgram" onchange="renderMurid()"><option value="">Semua Program</option><option value="Pondok">Pondok</option><option value="Reguler">Reguler</option></select></div>
+            <div class="col-md-4"><input type="text" class="form-control" id="searchMurid" placeholder="Cari nama murid..." oninput="renderMurid()"></div>
+            <div class="col-md-2 text-md-end"><small class="text-muted">Total: <strong id="totalMurid">0</strong></small></div>
+          </div>
+        </div>
+        <div class="table-responsive" id="tableMurid"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-jurnal" class="app-tab d-none">
+    <div class="card-custom">
+      <div class="card-header-custom">
+        <div><i class="bi bi-journal-text"></i> Jurnal Setoran Hafalan</div>
+        <div class="d-flex gap-2 flex-wrap d-none" id="jurnalActions">
+          <button class="btn btn-outline-blue btn-sm" onclick="downloadTemplateJurnal()"><i class="bi bi-download"></i> Template Excel</button>
+          <button class="btn btn-outline-orange btn-sm" onclick="document.getElementById('importJurnalFile').click()"><i class="bi bi-upload"></i> Import Excel</button>
+          <input type="file" id="importJurnalFile" accept=".xlsx,.xls" class="d-none" onchange="importJurnal(event)">
+          <button class="btn btn-accent-orange btn-sm" onclick="openModalJurnal()"><i class="bi bi-plus-circle"></i> Tambah Setoran</button>
+        </div>
+      </div>
+      <div class="card-body p-3">
+        <div class="filter-bar">
+          <div class="row g-2 align-items-center">
+            <div class="col-md-3"><select class="form-select" id="filterJurnalKelas" onchange="updateFilterJurnalMurid(); renderJurnal()"><option value="">Semua Kelas</option></select></div>
+            <div class="col-md-3"><select class="form-select" id="filterJurnalMurid" onchange="renderJurnal()"><option value="">Semua Murid</option></select></div>
+            <div class="col-md-3"><select class="form-select" id="filterJurnalBulan" onchange="renderJurnal()"><option value="">Semua Bulan</option></select></div>
+            <div class="col-md-3 text-md-end"><small class="text-muted">Total: <strong id="totalJurnal">0</strong> setoran</small></div>
+          </div>
+        </div>
+        <div class="table-responsive" id="tableJurnal"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-rekap" class="app-tab d-none">
+    <div class="row g-3 mb-4">
+      <div class="col-md-3 col-6"><div class="stat-card blue"><div class="d-flex justify-content-between align-items-start"><div><p class="stat-label">Total Murid</p><p class="stat-value" id="statTotalMurid">0</p></div><i class="bi bi-people stat-icon"></i></div></div></div>
+      <div class="col-md-3 col-6"><div class="stat-card orange"><div class="d-flex justify-content-between align-items-start"><div><p class="stat-label">Total Setoran</p><p class="stat-value" id="statTotalSetoran">0</p></div><i class="bi bi-journal-check stat-icon"></i></div></div></div>
+      <div class="col-md-3 col-6"><div class="stat-card green"><div class="d-flex justify-content-between align-items-start"><div><p class="stat-label">Total Halaman</p><p class="stat-value" id="statTotalHalaman">0</p></div><i class="bi bi-file-earmark-text stat-icon"></i></div></div></div>
+      <div class="col-md-3 col-6"><div class="stat-card purple"><div class="d-flex justify-content-between align-items-start"><div><p class="stat-label">Rata-rata/Bulan</p><p class="stat-value" id="statRataRata">0</p></div><i class="bi bi-graph-up stat-icon"></i></div></div></div>
+    </div>
+    <div class="card-custom mb-4">
+      <div class="card-header-custom"><div><i class="bi bi-funnel"></i> Filter Rekap (Nested)</div></div>
+      <div class="card-body p-3">
+        <div class="row g-3 align-items-end">
+          <div class="col-md-3"><label class="form-label">1. Pilih Kelas</label><select class="form-select" id="rekapFilterKelas" onchange="updateRekapFilterMurid(); renderRekap()"><option value="">Semua Kelas</option></select></div>
+          <div class="col-md-3"><label class="form-label">2. Pilih Murid</label><select class="form-select" id="rekapFilterMurid" onchange="renderRekap()"><option value="">Semua Murid</option></select></div>
+          <div class="col-md-3"><label class="form-label">3. Periode</label><select class="form-select" id="rekapPeriode" onchange="togglePeriodeRekap(); renderRekap()"><option value="semester">Per Semester</option><option value="bulanan">Per Bulan</option></select></div>
+          <div class="col-md-3" id="rekapBulanWrap" style="display:none;"><label class="form-label">4. Pilih Bulan</label><select class="form-select" id="rekapFilterBulan" onchange="renderRekap()"></select></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-custom mb-4">
+      <div class="card-header-custom"><div><i class="bi bi-bar-chart"></i> Grafik Progres Hafalan</div></div>
+      <div class="card-body p-3"><canvas id="chartRekap" height="100"></canvas></div>
+    </div>
+    <div class="card-custom">
+      <div class="card-header-custom">
+        <div><i class="bi bi-table"></i> Tabel Rekap Setoran</div>
+        <button class="btn btn-outline-blue btn-sm" onclick="exportRekapExcel()"><i class="bi bi-download"></i> Export Excel</button>
+      </div>
+      <div class="card-body p-3"><div class="table-responsive" id="tableRekap"></div></div>
+    </div>
+  </div>
+</main>
+
+<footer class="footer-custom">
+  <div class="footer-pattern"></div>
+  <div class="container text-center">
+    <div class="mb-2"><i class="bi bi-moon-stars"></i><span class="font-arabic mx-2" style="font-size:1.1rem;">وَقُل رَّبِّ زِدْنِي عِلْمًا</span><i class="bi bi-moon-stars"></i></div>
+    <p class="mb-1 fw-semibold">Dikembangkan oleh Tim ISMUBA SMA MUAD METRO 2026</p>
+    <small class="opacity-75">© Jurnal Tahfiz SMA Muhammadiyah Ahmad Dahlan Kota Metro</small>
+  </div>
+</footer>
+
+<!-- MODAL KELAS -->
+<div class="modal fade" id="modalKelas" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h6 class="modal-title"><i class="bi bi-building"></i> <span id="modalKelasTitle">Tambah Kelas</span></h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="kelasId">
+      <div class="mb-3"><label class="form-label">Nama Kelas <span class="text-danger">*</span></label><input type="text" class="form-control" id="kelasNama" placeholder="Contoh: X IPA 1" required></div>
+      <div class="mb-3"><label class="form-label">Wali Kelas</label><input type="text" class="form-control" id="kelasWali" placeholder="Nama wali kelas"></div>
+      <div class="mb-3"><label class="form-label">Tahun Ajaran</label><input type="text" class="form-control" id="kelasTahun" placeholder="Contoh: 2025/2026"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button><button class="btn btn-primary-blue btn-sm" onclick="saveKelas()"><i class="bi bi-save"></i> Simpan</button></div>
+  </div></div>
+</div>
+
+<!-- MODAL MURID -->
+<div class="modal fade" id="modalMurid" tabindex="-1">
+  <div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header"><h6 class="modal-title"><i class="bi bi-person-plus"></i> <span id="modalMuridTitle">Tambah Murid</span></h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="muridId">
+      <div class="row g-3">
+        <div class="col-md-12"><label class="form-label">Nama Lengkap <span class="text-danger">*</span></label><input type="text" class="form-control" id="muridNama" placeholder="Nama lengkap murid" required></div>
+        <div class="col-md-6"><label class="form-label">Kelas <span class="text-danger">*</span></label><select class="form-select" id="muridKelas" required></select></div>
+        <div class="col-md-6"><label class="form-label">Program <span class="text-danger">*</span></label><select class="form-select" id="muridProgram" onchange="updateTargetHafalan()" required><option value="">-- Pilih Program --</option><option value="Pondok">Pondok</option><option value="Reguler">Reguler</option></select></div>
+        <div class="col-md-6"><label class="form-label">Target Hafalan Semester (Halaman)</label><input type="number" class="form-control" id="muridTarget" readonly style="background:#f8fafc;"><small class="text-muted">Otomatis: Pondok = 20, Reguler = 10</small></div>
+        <div class="col-md-6"><label class="form-label">NIS (opsional)</label><input type="text" class="form-control" id="muridNis" placeholder="Nomor Induk Siswa"></div>
+        <div class="col-md-6"><label class="form-label">Mulai Hafalan <span class="text-danger">*</span></label><input type="date" class="form-control" id="muridMulai" required></div>
+        <div class="col-md-6"><label class="form-label">Akhir Hafalan <span class="text-danger">*</span></label><input type="date" class="form-control" id="muridAkhir" required></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button><button class="btn btn-primary-blue btn-sm" onclick="saveMurid()"><i class="bi bi-save"></i> Simpan</button></div>
+  </div></div>
+</div>
+
+<!-- MODAL JURNAL -->
+<div class="modal fade" id="modalJurnal" tabindex="-1">
+  <div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header"><h6 class="modal-title"><i class="bi bi-journal-plus"></i> <span id="modalJurnalTitle">Tambah Setoran</span></h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="jurnalId"><input type="hidden" id="jurnalMuridId">
+      <div class="row g-3">
+        <div class="col-md-12">
+          <label class="form-label">Nama Murid <span class="text-danger">*</span></label>
+          <div class="searchable-select">
+            <input type="text" class="form-control" id="jurnalMuridSearch" placeholder="Ketik nama murid..." oninput="filterMuridOptions()" onfocus="showMuridOptions()" onblur="setTimeout(()=>hideMuridOptions(),200)" autocomplete="off">
+            <div class="dropdown-options" id="muridDropdownOptions"></div>
+          </div>
+        </div>
+        <div class="col-md-6"><label class="form-label">Bulan Pelaporan <span class="text-danger">*</span></label><select class="form-select" id="jurnalBulan" required><option value="">-- Pilih Bulan --</option><option value="Januari">Januari</option><option value="Februari">Februari</option><option value="Maret">Maret</option><option value="April">April</option><option value="Mei">Mei</option><option value="Juni">Juni</option><option value="Juli">Juli</option><option value="Agustus">Agustus</option><option value="September">September</option><option value="Oktober">Oktober</option><option value="November">November</option><option value="Desember">Desember</option></select></div>
+        <div class="col-md-6"><label class="form-label">Jumlah Halaman <span class="text-danger">*</span></label><input type="number" class="form-control" id="jurnalHalaman" placeholder="Jumlah halaman terhitung" min="0" step="0.5" required></div>
+        <div class="col-md-12"><label class="form-label">Surat/Ayat Terakhir Disetor Bulan Ini <span class="text-danger">*</span></label><input type="text" class="form-control" id="jurnalSurat" placeholder="Contoh: Al-Baqarah: 100-120" required></div>
+        <div class="col-md-12"><label class="form-label">Catatan (opsional)</label><textarea class="form-control" id="jurnalCatatan" rows="2" placeholder="Catatan tambahan..."></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button><button class="btn btn-primary-blue btn-sm" onclick="saveJurnal()"><i class="bi bi-save"></i> Simpan</button></div>
+  </div></div>
+</div>
+
+<script>
+// --- KONFIGURASI ---
+const API_URL = 'https://script.google.com/macros/s/AKfycbxBj-k7ADbv92k0i_oVs2UepNxKpCr_xFr_FvVS6DvR1jEBLh79AhIyyxewyseSwuKW/exec'; // GANTI DENGAN URL GOOGLE APPS SCRIPT ANDA
+const ADMIN_USER = 'admin';
+const ADMIN_PASS = 'admin123';
+
+// --- DATA STORE ---
+let dataKelas = [], dataMurid = [], dataJurnal = [];
+const BULAN_LIST = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+let chartRekapInstance = null;
+let isLoggedIn = false;
+
+// --- HELPER FUNCTIONS ---
+function showToast(msg, type='success') {
+  const icons = { success:'bi-check-circle-fill text-success', error:'bi-x-circle-fill text-danger', warning:'bi-exclamation-triangle-fill text-warning', info:'bi-info-circle-fill text-primary' };
+  const toast = document.createElement('div');
+  toast.className = `toast-custom ${type}`;
+  toast.innerHTML = `<i class="bi ${icons[type]||icons.info}"></i><div>${msg}</div>`;
+  document.getElementById('toastContainer').appendChild(toast);
+  setTimeout(() => { toast.style.opacity='0'; toast.style.transform='translateX(120%)'; setTimeout(()=>toast.remove(),300); }, 3000);
+}
+
+function escapeHtml(str) { if (str === null || str === undefined) return ''; return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(str) { return String(str||'').replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+function formatDate(d) { if (!d) return '-'; try { const date = new Date(d); if (isNaN(date)) return d; return date.toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' }); } catch(e) { return d; } }
+function generateExcel(data, sheetName, filename, cols=null) {
+  const ws = XLSX.utils.json_to_sheet(data); if (cols) ws['!cols'] = cols;
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([wbout], { type: 'application/octet-stream' });
+  const url = URL.createObjectURL(blob); const a = document.createElement('a');
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+}
+
+// --- AUTHENTICATION ---
+function doLogin() {
+  const u = document.getElementById('loginUser').value;
+  const p = document.getElementById('loginPass').value;
+  
+  if (u === ADMIN_USER && p === ADMIN_PASS) {
+    isLoggedIn = true;
+    sessionStorage.setItem('tahfiz_logged_in', 'true');
+    document.getElementById('loginOverlay').style.display = 'none';
+    document.getElementById('btnLogout').classList.remove('d-none');
+    document.getElementById('btnLogoutMobile').classList.remove('d-none');
+    showAdminActions(true);
+    fetchData();
+    showToast('Login berhasil! Selamat datang Admin', 'success');
+  } else {
+    showToast('Username atau password salah', 'error');
+  }
+}
+
+function doLogout() {
+  isLoggedIn = false;
+  sessionStorage.removeItem('tahfiz_logged_in');
+  document.getElementById('loginOverlay').style.display = 'flex';
+  document.getElementById('btnLogout').classList.add('d-none');
+  document.getElementById('btnLogoutMobile').classList.add('d-none');
+  showAdminActions(false);
+  showToast('Anda telah keluar', 'warning');
+}
+
+function showAdminActions(show) {
+  ['kelasActions', 'muridActions', 'jurnalActions'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      if (show) { el.classList.remove('d-none'); el.style.display = 'flex'; }
+      else { el.classList.add('d-none'); el.style.display = 'none'; }
+    }
+  });
+  if (dataKelas.length > 0) renderKelas();
+  if (dataMurid.length > 0) renderMurid();
+  if (dataJurnal.length > 0) renderJurnal();
+}
+
+// --- API CALLS (GOOGLE SHEETS) ---
+async function fetchData() {
+  if (API_URL === 'https://script.google.com/macros/s/AKfycbxBj-k7ADbv92k0i_oVs2UepNxKpCr_xFr_FvVS6DvR1jEBLh79AhIyyxewyseSwuKW/exec') {
+    showToast('Harap set URL API terlebih dahulu di kode!', 'error');
+    return;
+  }
+  showToast('Memuat data dari server...', 'info');
+  try {
+    const res = await fetch(API_URL);
+    const json = await res.json();
+    if (json.status === 'success') {
+      dataKelas = json.data.kelas || [];
+      dataMurid = json.data.murid || [];
+      dataJurnal = json.data.jurnal || [];
+      renderKelas(); renderMurid(); renderJurnal();
+      showToast('Data berhasil dimuat', 'success');
+    } else { showToast('Gagal memuat data', 'error'); }
+  } catch (e) { showToast('Error koneksi: ' + e.message, 'error'); }
+}
+
+async function apiPost(action, table, data) {
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action, table, data })
+    });
+    const json = await res.json();
+    return json.status === 'success';
+  } catch (e) {
+    showToast('Error API: ' + e.message, 'error');
+    return false;
+  }
+}
+
+// --- TAB SWITCH ---
+function switchTab(tabName) {
+  document.querySelectorAll('.app-tab').forEach(el => el.classList.add('d-none'));
+  document.getElementById('tab-' + tabName).classList.remove('d-none');
+  document.querySelectorAll('.btn-tab').forEach(el => el.classList.remove('active'));
+  document.querySelector(`.btn-tab[data-tab="${tabName}"]`).classList.add('active');
+  if (tabName === 'kelas') renderKelas();
+  if (tabName === 'murid') renderMurid();
+  if (tabName === 'jurnal') renderJurnal();
+  if (tabName === 'rekap') renderRekap();
+}
+
+// === KELOLA KELAS ===
+function renderKelas() {
+  const search = (document.getElementById('searchKelas')?.value || '').toLowerCase();
+  let filtered = dataKelas.filter(k => (k.nama||'').toLowerCase().includes(search) || (k.wali||'').toLowerCase().includes(search));
+  document.getElementById('totalKelas').textContent = filtered.length;
+  const tbody = document.getElementById('tableKelas');
+  if (filtered.length === 0) { tbody.innerHTML = `<div class="empty-state"><i class="bi bi-inbox"></i><h6>Belum ada data kelas</h6></div>`; return; }
+  tbody.innerHTML = `<table class="table table-custom"><thead><tr><th style="width:50px;">No</th><th>Nama Kelas</th><th>Wali Kelas</th><th>Tahun Ajaran</th><th>Jumlah Murid</th>${isLoggedIn?'<th style="width:120px;">Aksi</th>':''}</tr></thead><tbody>${filtered.map((k, i) => {
+    const jmlMurid = dataMurid.filter(m => m.kelasId == k.id).length;
+    return `<tr><td>${i+1}</td><td><strong>${escapeHtml(k.nama)}</strong></td><td>${escapeHtml(k.wali||'-')}</td><td>${escapeHtml(k.tahun||'-')}</td><td><span class="badge bg-info">${jmlMurid} murid</span></td>${isLoggedIn?`<td><button class="btn btn-outline-blue btn-action" onclick="openModalKelas(${k.id})"><i class="bi bi-pencil"></i></button><button class="btn btn-outline-danger btn-action" onclick="deleteKelas(${k.id})"><i class="bi bi-trash"></i></button></td>`:''}</tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+function openModalKelas(id=null) {
+  if(!isLoggedIn) return;
+  document.getElementById('modalKelasTitle').textContent = id ? 'Edit Kelas' : 'Tambah Kelas';
+  document.getElementById('kelasId').value = id || '';
+  if (id) {
+    const k = dataKelas.find(x => x.id == id);
+    document.getElementById('kelasNama').value = k.nama||''; 
+    document.getElementById('kelasWali').value = k.wali||''; 
+    document.getElementById('kelasTahun').value = k.tahun||'';
+  } else { 
+    document.getElementById('kelasNama').value=''; 
+    document.getElementById('kelasWali').value=''; 
+    document.getElementById('kelasTahun').value=''; 
+  }
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('modalKelas')).show();
+}
+
+async function saveKelas() {
+  const nama = document.getElementById('kelasNama').value.trim();
+  if (!nama) return showToast('Nama kelas wajib diisi', 'error');
+  const id = document.getElementById('kelasId').value;
+  const payload = { id: id ? Number(id) : Date.now(), nama, wali: document.getElementById('kelasWali').value.trim(), tahun: document.getElementById('kelasTahun').value.trim() };
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('modalKelas')).hide();
+  showToast('Menyimpan ke server...', 'info');
+  if (await apiPost(id ? 'update' : 'create', 'kelas', payload)) {
+    if (id) { const k = dataKelas.find(x => x.id == id); Object.assign(k, payload); }
+    else { dataKelas.push(payload); }
+    renderKelas(); showToast('Data kelas tersimpan', 'success');
+  }
+}
+
+async function deleteKelas(id) {
+  if(!isLoggedIn) return;
+  if (!confirm('Hapus kelas ini?')) return;
+  showToast('Menghapus...', 'info');
+  if (await apiPost('delete', 'kelas', { id: Number(id) })) { 
+    dataKelas = dataKelas.filter(k => k.id != id); 
+    renderKelas(); 
+    showToast('Kelas dihapus', 'warning'); 
+  }
+}
+
+function downloadTemplateKelas() { 
+  generateExcel([{ 'Nama Kelas':'X IPA 1', 'Wali Kelas':'Budi Santoso', 'Tahun Ajaran':'2025/2026' }], 'Kelas', 'Template_Kelas.xlsx'); 
+  showToast('Template Excel kelas diunduh'); 
+}
+
+async function importKelas(event) {
+  if(!isLoggedIn) return; 
+  const file = event.target.files[0]; 
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const wb = XLSX.read(e.target.result, { type:'array' }); 
+      const ws = wb.Sheets[wb.SheetNames[0]]; 
+      const rows = XLSX.utils.sheet_to_json(ws);
+      let count = 0; showToast('Mengimpor data...', 'info');
+      for (const r of rows) {
+        if (r['Nama Kelas']) {
+          const payload = { id: Date.now()+Math.random(), nama: String(r['Nama Kelas']), wali: r['Wali Kelas']||'', tahun: r['Tahun Ajaran']||'' };
+          await apiPost('create', 'kelas', payload); dataKelas.push(payload); count++;
+        }
+      }
+      renderKelas(); showToast(`${count} kelas berhasil diimport`);
+    } catch(err) { showToast('Gagal import: '+err.message, 'error'); }
+  }; 
+  reader.readAsArrayBuffer(file); 
+  event.target.value = '';
+}
+
+// === KELOLA MURID ===
+function populateKelasOptions(selectId, selectedId=null) { 
+  const sel = document.getElementById(selectId); 
+  const currentVal = selectedId !== null ? selectedId : sel.value; 
+  sel.innerHTML = '<option value="">-- Pilih Kelas --</option>' + dataKelas.map(k => `<option value="${k.id}" ${currentVal==k.id?'selected':''}>${escapeHtml(k.nama)}</option>`).join(''); 
+}
+
+function updateTargetHafalan() { 
+  const program = document.getElementById('muridProgram').value; 
+  document.getElementById('muridTarget').value = program === 'Pondok' ? 20 : (program === 'Reguler' ? 10 : ''); 
+}
+
+function renderMurid() {
+  const filterKelas = document.getElementById('filterMuridKelas'); 
+  const currFilter = filterKelas.value;
+  filterKelas.innerHTML = '<option value="">Semua Kelas</option>' + dataKelas.map(k => `<option value="${k.id}" ${currFilter==k.id?'selected':''}>${escapeHtml(k.nama)}</option>`).join('');
+  const search = (document.getElementById('searchMurid')?.value || '').toLowerCase(); 
+  const kelasFilter = filterKelas.value; 
+  const programFilter = document.getElementById('filterMuridProgram').value;
+  let filtered = dataMurid.filter(m => (!kelasFilter || m.kelasId == kelasFilter) && (!programFilter || m.program === programFilter) && ((m.nama||'').toLowerCase().includes(search)));
+  document.getElementById('totalMurid').textContent = filtered.length; 
+  const tbody = document.getElementById('tableMurid');
+  if (filtered.length === 0) { tbody.innerHTML = `<div class="empty-state"><i class="bi bi-people"></i><h6>Belum ada data murid</h6></div>`; return; }
+  tbody.innerHTML = `<table class="table table-custom"><thead><tr><th style="width:40px;">No</th><th>Nama Lengkap</th><th>Kelas</th><th>Program</th><th>Target</th><th>Mulai</th><th>Akhir</th>${isLoggedIn?'<th style="width:120px;">Aksi</th>':''}</tr></thead><tbody>${filtered.map((m, i) => {
+    const kelas = dataKelas.find(k => k.id == m.kelasId);
+    return `<tr><td>${i+1}</td><td><strong>${escapeHtml(m.nama)}</strong><br><small class="text-muted">${escapeHtml(m.nis||'')}</small></td><td>${kelas ? escapeHtml(kelas.nama) : '-'}</td><td><span class="badge-program-${(m.program||'').toLowerCase()}">${m.program||'-'}</span></td><td><strong>${m.target||0}</strong> hal</td><td>${formatDate(m.mulai)}</td><td>${formatDate(m.akhir)}</td>${isLoggedIn?`<td><button class="btn btn-outline-blue btn-action" onclick="openModalMurid(${m.id})"><i class="bi bi-pencil"></i></button><button class="btn btn-outline-danger btn-action" onclick="deleteMurid(${m.id})"><i class="bi bi-trash"></i></button></td>`:''}</tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+function openModalMurid(id=null) {
+  if(!isLoggedIn) return; 
+  document.getElementById('modalMuridTitle').textContent = id ? 'Edit Murid' : 'Tambah Murid'; 
+  document.getElementById('muridId').value = id || ''; 
+  populateKelasOptions('muridKelas');
+  if (id) { 
+    const m = dataMurid.find(x => x.id == id); 
+    document.getElementById('muridNama').value = m.nama||''; 
+    document.getElementById('muridKelas').value = m.kelasId||''; 
+    document.getElementById('muridProgram').value = m.program||''; 
+    document.getElementById('muridNis').value = m.nis||''; 
+    document.getElementById('muridMulai').value = m.mulai||''; 
+    document.getElementById('muridAkhir').value = m.akhir||''; 
+    updateTargetHafalan(); 
+    document.getElementById('muridTarget').value = m.target||''; 
+  } else { 
+    ['muridNama','muridNis','muridMulai','muridAkhir'].forEach(id => document.getElementById(id).value=''); 
+    document.getElementById('muridProgram').value = ''; 
+    document.getElementById('muridKelas').value = ''; 
+    updateTargetHafalan(); 
+  }
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('modalMurid')).show();
+}
+
+async function saveMurid() {
+  const nama = document.getElementById('muridNama').value.trim(); 
+  const kelasId = document.getElementById('muridKelas').value; 
+  const program = document.getElementById('muridProgram').value; 
+  const mulai = document.getElementById('muridMulai').value; 
+  const akhir = document.getElementById('muridAkhir').value;
+  if (!nama) return showToast('Nama wajib diisi', 'error'); 
+  if (!kelasId) return showToast('Kelas wajib dipilih', 'error'); 
+  if (!program) return showToast('Program wajib dipilih', 'error'); 
+  if (!mulai) return showToast('Tanggal mulai wajib diisi', 'error'); 
+  if (!akhir) return showToast('Tanggal akhir wajib diisi', 'error');
+  const target = program === 'Pondok' ? 20 : 10; 
+  const nis = document.getElementById('muridNis').value.trim(); 
+  const id = document.getElementById('muridId').value;
+  const payload = { id: id ? Number(id) : Date.now(), nama, kelasId: Number(kelasId), program, target, nis, mulai, akhir };
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('modalMurid')).hide(); 
+  showToast('Menyimpan...', 'info');
+  if (await apiPost(id ? 'update' : 'create', 'murid', payload)) {
+    if (id) { const m = dataMurid.find(x => x.id == id); Object.assign(m, payload); } 
+    else { dataMurid.push(payload); }
+    renderMurid(); showToast('Data murid tersimpan', 'success');
+  }
+}
+
+async function deleteMurid(id) {
+  if(!isLoggedIn) return; 
+  if (!confirm('Hapus murid ini?')) return; 
+  showToast('Menghapus...', 'info');
+  if (await apiPost('delete', 'murid', { id: Number(id) })) { 
+    dataMurid = dataMurid.filter(m => m.id != id); 
+    dataJurnal = dataJurnal.filter(j => j.muridId != id); 
+    renderMurid(); 
+    showToast('Murid dihapus', 'warning'); 
+  }
+}
+
+function downloadTemplateMurid() { 
+  generateExcel([{ 'Nama Lengkap':'Ahmad Fauzan', 'Kelas':'X IPA 1', 'Program':'Pondok', 'NIS':'2025001', 'Mulai Hafalan':'2025-01-01', 'Akhir Hafalan':'2025-06-30' }], 'Murid', 'Template_Murid.xlsx', [{wch:25},{wch:15},{wch:12},{wch:12},{wch:15},{wch:15}]); 
+  showToast('Template Excel murid diunduh'); 
+}
+
+async function importMurid(event) {
+  if(!isLoggedIn) return; 
+  const file = event.target.files[0]; 
+  if (!file) return; 
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try { 
+      const wb = XLSX.read(e.target.result, { type:'array' }); 
+      const ws = wb.Sheets[wb.SheetNames[0]]; 
+      const rows = XLSX.utils.sheet_to_json(ws); 
+      let count = 0, failed = 0; 
+      showToast('Mengimpor data...', 'info');
+      for (const r of rows) {
+        if (!r['Nama Lengkap']) { failed++; continue; }
+        const kelasNama = String(r['Kelas']||'').trim(); 
+        let kelas = dataKelas.find(k => k.nama.toLowerCase() === kelasNama.toLowerCase());
+        if (!kelas && kelasNama) { 
+          kelas = { id: Date.now()+Math.random(), nama: kelasNama, wali:'', tahun:'' }; 
+          await apiPost('create', 'kelas', kelas); 
+          dataKelas.push(kelas); 
+        }
+        const program = (r['Program']||'Reguler').trim(); 
+        const target = program === 'Pondok' ? 20 : 10;
+        const payload = { id: Date.now()+Math.random(), nama: String(r['Nama Lengkap']), kelasId: kelas?kelas.id:'', program, target, nis: r['NIS'] ? String(r['NIS']) : '', mulai: r['Mulai Hafalan'] ? formatDateExcel(r['Mulai Hafalan']) : '', akhir: r['Akhir Hafalan'] ? formatDateExcel(r['Akhir Hafalan']) : '' };
+        await apiPost('create', 'murid', payload); 
+        dataMurid.push(payload); 
+        count++;
+      }
+      renderMurid(); 
+      showToast(`${count} murid berhasil diimport${failed?` (${failed} baris gagal)`:''}`);
+    } catch(err) { showToast('Gagal import: '+err.message, 'error'); }
+  }; 
+  reader.readAsArrayBuffer(file); 
+  event.target.value = '';
+}
+
+// === JURNAL SETORAN ===
+function updateFilterJurnalMurid() { 
+  const kelasFilter = document.getElementById('filterJurnalKelas').value; 
+  const muridFilter = document.getElementById('filterJurnalMurid'); 
+  const curr = muridFilter.value; 
+  let murids = dataMurid; 
+  if (kelasFilter) murids = murids.filter(m => m.kelasId == kelasFilter); 
+  muridFilter.innerHTML = '<option value="">Semua Murid</option>' + murids.map(m => `<option value="${m.id}" ${curr==m.id?'selected':''}>${escapeHtml(m.nama)}</option>`).join(''); 
+}
+
+function renderJurnal() {
+  const filterKelas = document.getElementById('filterJurnalKelas'); 
+  const currKelas = filterKelas.value;
+  filterKelas.innerHTML = '<option value="">Semua Kelas</option>' + dataKelas.map(k => `<option value="${k.id}" ${currKelas==k.id?'selected':''}>${escapeHtml(k.nama)}</option>`).join('');
+  updateFilterJurnalMurid();
+  const filterBulan = document.getElementById('filterJurnalBulan'); 
+  const currBulan = filterBulan.value;
+  filterBulan.innerHTML = '<option value="">Semua Bulan</option>' + BULAN_LIST.map(b => `<option value="${b}" ${currBulan==b?'selected':''}>${b}</option>`).join('');
+  const kelasFilter = filterKelas.value; 
+  const muridFilter = document.getElementById('filterJurnalMurid').value; 
+  const bulanFilter = filterBulan.value;
+  let filtered = dataJurnal.filter(j => { 
+    const murid = dataMurid.find(m => m.id == j.muridId); 
+    if (!murid) return false; 
+    if (kelasFilter && murid.kelasId != kelasFilter) return false; 
+    if (muridFilter && j.muridId != muridFilter) return false; 
+    if (bulanFilter && j.bulan !== bulanFilter) return false; 
+    return true; 
+  });
+  filtered.sort((a,b) => (b.id||0) - (a.id||0));
+  document.getElementById('totalJurnal').textContent = filtered.length; 
+  const tbody = document.getElementById('tableJurnal');
+  if (filtered.length === 0) { tbody.innerHTML = `<div class="empty-state"><i class="bi bi-journal-text"></i><h6>Belum ada data setoran</h6></div>`; return; }
+  tbody.innerHTML = `<table class="table table-custom"><thead><tr><th style="width:40px;">No</th><th>Nama Murid</th><th>Kelas</th><th>Bulan</th><th>Surat/Ayat Terakhir</th><th>Halaman</th><th>Catatan</th>${isLoggedIn?'<th style="width:120px;">Aksi</th>':''}</tr></thead><tbody>${filtered.map((j, i) => {
+    const murid = dataMurid.find(m => m.id == j.muridId); 
+    const kelas = murid ? dataKelas.find(k => k.id == murid.kelasId) : null;
+    return `<tr><td>${i+1}</td><td><strong>${murid ? escapeHtml(murid.nama) : '-'}</strong></td><td>${kelas ? escapeHtml(kelas.nama) : '-'}</td><td><span class="badge bg-secondary">${j.bulan||'-'}</span></td><td>${escapeHtml(j.surat||'-')}</td><td><strong class="text-primary">${j.halaman||0}</strong> hal</td><td><small class="text-muted">${escapeHtml(j.catatan||'-')}</small></td>${isLoggedIn?`<td><button class="btn btn-outline-blue btn-action" onclick="openModalJurnal(${j.id})"><i class="bi bi-pencil"></i></button><button class="btn btn-outline-danger btn-action" onclick="deleteJurnal(${j.id})"><i class="bi bi-trash"></i></button></td>`:''}</tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+function showMuridOptions() { 
+  const dropdown = document.getElementById('muridDropdownOptions'); 
+  const murids = dataMurid.map(m => { const kelas = dataKelas.find(k => k.id == m.kelasId); return { ...m, kelasNama: kelas ? kelas.nama : '-' }; }); 
+  if (murids.length === 0) { dropdown.innerHTML = '<div class="dropdown-option text-muted">Belum ada data murid</div>'; } 
+  else { dropdown.innerHTML = murids.map(m => `<div class="dropdown-option" onclick="selectMuridJurnal(${m.id}, '${escapeAttr(m.nama)}')"><strong>${escapeHtml(m.nama)}</strong><br><small class="text-muted">${escapeHtml(m.kelasNama)} • ${m.program}</small></div>`).join(''); } 
+  dropdown.classList.add('show'); 
+}
+
+function filterMuridOptions() { 
+  const search = document.getElementById('jurnalMuridSearch').value.toLowerCase(); 
+  const dropdown = document.getElementById('muridDropdownOptions'); 
+  const murids = dataMurid.filter(m => (m.nama||'').toLowerCase().includes(search)).map(m => { const kelas = dataKelas.find(k => k.id == m.kelasId); return { ...m, kelasNama: kelas ? kelas.nama : '-' }; }); 
+  if (murids.length === 0) { dropdown.innerHTML = '<div class="dropdown-option text-muted">Murid tidak ditemukan</div>'; } 
+  else { dropdown.innerHTML = murids.map(m => `<div class="dropdown-option" onclick="selectMuridJurnal(${m.id}, '${escapeAttr(m.nama)}')"><strong>${escapeHtml(m.nama)}</strong><br><small class="text-muted">${escapeHtml(m.kelasNama)} • ${m.program}</small></div>`).join(''); } 
+  dropdown.classList.add('show'); 
+}
+
+function hideMuridOptions() { document.getElementById('muridDropdownOptions').classList.remove('show'); }
+function selectMuridJurnal(id, nama) { document.getElementById('jurnalMuridId').value = id; document.getElementById('jurnalMuridSearch').value = nama; hideMuridOptions(); }
+
+function openModalJurnal(id=null) {
+  if(!isLoggedIn) return; 
+  document.getElementById('modalJurnalTitle').textContent = id ? 'Edit Setoran' : 'Tambah Setoran'; 
+  document.getElementById('jurnalId').value = id || ''; 
+  document.getElementById('jurnalMuridId').value = ''; 
+  document.getElementById('jurnalMuridSearch').value = ''; 
+  document.getElementById('jurnalBulan').value = ''; 
+  document.getElementById('jurnalHalaman').value = ''; 
+  document.getElementById('jurnalSurat').value = ''; 
+  document.getElementById('jurnalCatatan').value = '';
+  if (id) { 
+    const j = dataJurnal.find(x => x.id == id); 
+    if (j) { 
+      const murid = dataMurid.find(m => m.id == j.muridId); 
+      document.getElementById('jurnalMuridId').value = j.muridId; 
+      document.getElementById('jurnalMuridSearch').value = murid ? murid.nama : ''; 
+      document.getElementById('jurnalBulan').value = j.bulan||''; 
+      document.getElementById('jurnalHalaman').value = j.halaman||''; 
+      document.getElementById('jurnalSurat').value = j.surat||''; 
+      document.getElementById('jurnalCatatan').value = j.catatan||''; 
+    } 
+  }
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('modalJurnal')).show();
+}
+
+async function saveJurnal() {
+  const muridId = document.getElementById('jurnalMuridId').value; 
+  const bulan = document.getElementById('jurnalBulan').value; 
+  const halaman = document.getElementById('jurnalHalaman').value; 
+  const surat = document.getElementById('jurnalSurat').value.trim(); 
+  const catatan = document.getElementById('jurnalCatatan').value.trim();
+  if (!muridId) return showToast('Murid wajib dipilih', 'error'); 
+  if (!bulan) return showToast('Bulan wajib dipilih', 'error'); 
+  if (!surat) return showToast('Surat/ayat wajib diisi', 'error'); 
+  if (halaman === '') return showToast('Jumlah halaman wajib diisi', 'error');
+  const id = document.getElementById('jurnalId').value; 
+  const payload = { id: id ? Number(id) : Date.now(), muridId: Number(muridId), bulan, surat, halaman: Number(halaman), catatan };
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('modalJurnal')).hide(); 
+  showToast('Menyimpan...', 'info');
+  if (await apiPost(id ? 'update' : 'create', 'jurnal', payload)) {
+    if (id) { const j = dataJurnal.find(x => x.id == id); Object.assign(j, payload); } 
+    else { dataJurnal.push(payload); }
+    renderJurnal(); showToast('Setoran tersimpan', 'success');
+  }
+}
+
+async function deleteJurnal(id) {
+  if(!isLoggedIn) return; 
+  if (!confirm('Hapus setoran ini?')) return; 
+  showToast('Menghapus...', 'info');
+  if (await apiPost('delete', 'jurnal', { id: Number(id) })) { 
+    dataJurnal = dataJurnal.filter(j => j.id != id); 
+    renderJurnal(); 
+    showToast('Setoran dihapus', 'warning'); 
+  }
+}
+
+function downloadTemplateJurnal() { 
+  generateExcel([{ 'Nama Murid':'Ahmad Fauzan', 'Bulan Pelaporan':'Januari', 'Surat/Ayat Terakhir':'Al-Baqarah: 100-120', 'Jumlah Halaman':5, 'Catatan':'Hafalan lancar' }], 'Jurnal', 'Template_Jurnal.xlsx', [{wch:25},{wch:18},{wch:30},{wch:15},{wch:25}]); 
+  showToast('Template Excel jurnal diunduh'); 
+}
+
+async function importJurnal(event) {
+  if(!isLoggedIn) return; 
+  const file = event.target.files[0]; 
+  if (!file) return; 
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try { 
+      const wb = XLSX.read(e.target.result, { type:'array' }); 
+      const ws = wb.Sheets[wb.SheetNames[0]]; 
+      const rows = XLSX.utils.sheet_to_json(ws); 
+      let count = 0, failed = 0; 
+      showToast('Mengimpor data...', 'info');
+      for (const r of rows) {
+        if (!r['Nama Murid']) { failed++; continue; } 
+        const namaMurid = String(r['Nama Murid']).trim(); 
+        const murid = dataMurid.find(m => m.nama.toLowerCase() === namaMurid.toLowerCase());
+        if (!murid) { failed++; continue; }
+        const payload = { id: Date.now()+Math.random(), muridId: murid.id, bulan: r['Bulan Pelaporan'] ? String(r['Bulan Pelaporan']) : '', surat: r['Surat/Ayat Terakhir'] ? String(r['Surat/Ayat Terakhir']) : '', halaman: r['Jumlah Halaman'] ? Number(r['Jumlah Halaman']) : 0, catatan: r['Catatan'] ? String(r['Catatan']) : '' };
+        await apiPost('create', 'jurnal', payload); 
+        dataJurnal.push(payload); 
+        count++;
+      }
+      renderJurnal(); 
+      showToast(`${count} setoran berhasil diimport${failed?` (${failed} baris gagal)`:''}`);
+    } catch(err) { showToast('Gagal import: '+err.message, 'error'); }
+  }; 
+  reader.readAsArrayBuffer(file); 
+  event.target.value = '';
+}
+
+function formatDateExcel(val) { 
+  if (!val) return ''; 
+  if (typeof val === 'string') return val; 
+  if (val instanceof Date) return val.toISOString().split('T')[0]; 
+  if (typeof val === 'number') { const date = new Date((val - 25569) * 86400 * 1000); return date.toISOString().split('T')[0]; } 
+  return String(val); 
+}
+
+// === REKAP & STATISTIK ===
+function togglePeriodeRekap() { 
+  const periode = document.getElementById('rekapPeriode').value; 
+  document.getElementById('rekapBulanWrap').style.display = periode === 'bulanan' ? 'block' : 'none'; 
+  if (periode === 'bulanan') { const sel = document.getElementById('rekapFilterBulan'); sel.innerHTML = '<option value="">Semua Bulan</option>' + BULAN_LIST.map(b => `<option value="${b}">${b}</option>`).join(''); } 
+}
+
+function updateRekapFilterMurid() { 
+  const kelasFilter = document.getElementById('rekapFilterKelas').value; 
+  const muridFilter = document.getElementById('rekapFilterMurid'); 
+  const curr = muridFilter.value; 
+  let murids = dataMurid; 
+  if (kelasFilter) murids = murids.filter(m => m.kelasId == kelasFilter); 
+  muridFilter.innerHTML = '<option value="">Semua Murid</option>' + murids.map(m => `<option value="${m.id}" ${curr==m.id?'selected':''}>${escapeHtml(m.nama)}</option>`).join(''); 
+}
+
+function getFilteredJurnal() { 
+  const kelasFilter = document.getElementById('rekapFilterKelas').value; 
+  const muridFilter = document.getElementById('rekapFilterMurid').value; 
+  const periode = document.getElementById('rekapPeriode').value; 
+  const bulanFilter = document.getElementById('rekapFilterBulan')?.value || ''; 
+  return dataJurnal.filter(j => { 
+    const murid = dataMurid.find(m => m.id == j.muridId); 
+    if (!murid) return false; 
+    if (kelasFilter && murid.kelasId != kelasFilter) return false; 
+    if (muridFilter && j.muridId != muridFilter) return false; 
+    if (periode === 'bulanan' && bulanFilter && j.bulan !== bulanFilter) return false; 
+    return true; 
+  }); 
+}
+
+function renderRekap() {
+  const filterKelas = document.getElementById('rekapFilterKelas'); 
+  const currKelas = filterKelas.value;
+  filterKelas.innerHTML = '<option value="">Semua Kelas</option>' + dataKelas.map(k => `<option value="${k.id}" ${currKelas==k.id?'selected':''}>${escapeHtml(k.nama)}</option>`).join('');
+  updateRekapFilterMurid();
+  const filtered = getFilteredJurnal(); 
+  const totalHalaman = filtered.reduce((s, j) => s + (Number(j.halaman)||0), 0); 
+  const totalMuridFilter = new Set(filtered.map(j => j.muridId)).size; 
+  const rataRata = filtered.length > 0 ? (totalHalaman / filtered.length).toFixed(1) : 0;
+  document.getElementById('statTotalMurid').textContent = totalMuridFilter || dataMurid.length; 
+  document.getElementById('statTotalSetoran').textContent = filtered.length; 
+  document.getElementById('statTotalHalaman').textContent = totalHalaman; 
+  document.getElementById('statRataRata').textContent = rataRata;
+  const muridFiltered = dataMurid.filter(m => { 
+    if (document.getElementById('rekapFilterKelas').value && m.kelasId != document.getElementById('rekapFilterKelas').value) return false; 
+    if (document.getElementById('rekapFilterMurid').value && m.id != document.getElementById('rekapFilterMurid').value) return false; 
+    return true; 
+  });
+  const tbody = document.getElementById('tableRekap');
+  if (muridFiltered.length === 0) { tbody.innerHTML = `<div class="empty-state"><i class="bi bi-graph-up"></i><h6>Belum ada data</h6></div>`; renderChart([]); return; }
+  const rekapData = muridFiltered.map(m => { 
+    const jurnals = filtered.filter(j => j.muridId == m.id); 
+    const totalHal = jurnals.reduce((s,j) => s + (Number(j.halaman)||0), 0); 
+    const target = m.target || 0; 
+    const persen = target > 0 ? Math.min(100, (totalHal/target*100)) : 0; 
+    const kelas = dataKelas.find(k => k.id == m.kelasId); 
+    return { murid: m, kelasNama: kelas?kelas.nama:'-', jurnals, totalHal, target, persen }; 
+  });
+  tbody.innerHTML = `<table class="table table-custom"><thead><tr><th style="width:40px;">No</th><th>Nama Murid</th><th>Kelas</th><th>Program</th><th>Target</th><th>Total Setoran</th><th>Total Halaman</th><th style="width:200px;">Pencapaian</th></tr></thead><tbody>${rekapData.map((r, i) => { 
+    const status = r.persen >= 100 ? 'text-success' : (r.persen >= 50 ? 'text-warning' : 'text-danger'); 
+    return `<tr><td>${i+1}</td><td><strong>${escapeHtml(r.murid.nama)}</strong></td><td>${escapeHtml(r.kelasNama)}</td><td><span class="badge-program-${(r.murid.program||'').toLowerCase()}">${r.murid.program||'-'}</span></td><td>${r.target} hal</td><td>${r.jurnals.length}x</td><td><strong class="${status}">${r.totalHal} hal</strong></td><td><div class="d-flex align-items-center gap-2"><div class="progress flex-grow-1 progress-custom" style="height:8px;"><div class="progress-bar" style="width:${r.persen}%"></div></div><small class="${status} fw-bold">${r.persen.toFixed(0)}%</small></div></td></tr>`; 
+  }).join('')}</tbody><tfoot><tr style="background:var(--primary-blue-soft); font-weight:600;"><td colspan="4">TOTAL</td><td>${rekapData.reduce((s,r)=>s+r.target,0)} hal</td><td>${filtered.length}x</td><td>${totalHalaman} hal</td><td>-</td></tr></tfoot></table>`;
+  renderChart(rekapData);
+}
+
+function renderChart(rekapData) { 
+  const ctx = document.getElementById('chartRekap'); 
+  if (chartRekapInstance) chartRekapInstance.destroy(); 
+  if (rekapData.length === 0) { ctx.getContext('2d').clearRect(0,0,ctx.width,ctx.height); return; } 
+  const muridFilter = document.getElementById('rekapFilterMurid').value; 
+  if (muridFilter) { 
+    const labels = BULAN_LIST; 
+    const dataHalaman = BULAN_LIST.map(bulan => { const jurnals = rekapData[0].jurnals.filter(j => j.bulan === bulan); return jurnals.reduce((s,j) => s + (Number(j.halaman)||0), 0); }); 
+    chartRekapInstance = new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ label: 'Halaman per Bulan', data: dataHalaman, backgroundColor: 'rgba(249, 115, 22, 0.8)', borderColor: '#ea580c', borderWidth: 2, borderRadius: 6 }] }, options: { responsive: true, plugins: { title: { display: true, text: 'Progres Hafalan ' + rekapData[0].murid.nama + ' per Bulan', font:{ size:14 } }, legend: { display: false } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Halaman' } } } } }); 
+  } else { 
+    const labels = rekapData.map(r => r.murid.nama); 
+    const dataHalaman = rekapData.map(r => r.totalHal); 
+    const dataTarget = rekapData.map(r => r.target); 
+    chartRekapInstance = new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ label: 'Halaman Tercapai', data: dataHalaman, backgroundColor: 'rgba(13, 79, 139, 0.8)', borderColor: '#0d4f8b', borderWidth: 2, borderRadius: 6 }, { label: 'Target Semester', data: dataTarget, backgroundColor: 'rgba(249, 115, 22, 0.6)', borderColor: '#ea580c', borderWidth: 2, borderRadius: 6 }] }, options: { responsive: true, plugins: { title: { display: true, text: 'Perbandingan Pencapaian vs Target per Murid', font:{ size:14 } }, legend: { position: 'top' } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Jumlah Halaman' } } } } }); 
+  } 
+}
+
+function exportRekapExcel() { 
+  const filtered = getFilteredJurnal(); 
+  const muridFiltered = dataMurid.filter(m => { if (document.getElementById('rekapFilterKelas').value && m.kelasId != document.getElementById('rekapFilterKelas').value) return false; if (document.getElementById('rekapFilterMurid').value && m.id != document.getElementById('rekapFilterMurid').value) return false; return true; }); 
+  const exportData = muridFiltered.map((m, i) => { const jurnals = filtered.filter(j => j.muridId == m.id); const totalHal = jurnals.reduce((s,j) => s + (Number(j.halaman)||0), 0); const target = m.target || 0; const persen = target > 0 ? (totalHal/target*100).toFixed(1) : 0; const kelas = dataKelas.find(k => k.id == m.kelasId); return { 'No': i+1, 'Nama Murid': m.nama, 'Kelas': kelas ? kelas.nama : '-', 'Program': m.program, 'Target (hal)': target, 'Total Setoran': jurnals.length, 'Total Halaman': totalHal, 'Pencapaian (%)': persen }; }); 
+  generateExcel(exportData, 'Rekap', 'Rekap_Tahfiz.xlsx', [{wch:5},{wch:25},{wch:15},{wch:10},{wch:12},{wch:12},{wch:12},{wch:12}]); 
+  showToast('Rekap berhasil diexport ke Excel'); 
+}
+
+// === INIT ===
+document.addEventListener('DOMContentLoaded', () => {
+  if (sessionStorage.getItem('tahfiz_logged_in') === 'true') {
+    isLoggedIn = true;
+    document.getElementById('loginOverlay').style.display = 'none';
+    document.getElementById('btnLogout').classList.remove('d-none');
+    document.getElementById('btnLogoutMobile').classList.remove('d-none');
+    showAdminActions(true);
+    fetchData();
+  } else {
+    showAdminActions(false);
+  }
+});
+
+// Enter key listener for login
+document.getElementById('loginPass').addEventListener('keyup', function(event) {
+  if (event.key === 'Enter') doLogin();
+});
+document.getElementById('loginUser').addEventListener('keyup', function(event) {
+  if (event.key === 'Enter') doLogin();
+});
+</script>
+</body>
+</html>
