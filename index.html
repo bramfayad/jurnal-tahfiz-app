@@ -124,7 +124,6 @@ main, header, nav, footer { position: relative; z-index: 1; }
 </head>
 <body>
 
-<!-- LOGIN OVERLAY -->
 <div id="loginOverlay">
   <div class="login-box">
     <div class="logo-container mx-auto mb-3" style="width:70px; height:70px;">
@@ -135,7 +134,7 @@ main, header, nav, footer { position: relative; z-index: 1; }
     <input type="text" id="loginUser" class="form-control mb-2 text-center" placeholder="Username">
     <input type="password" id="loginPass" class="form-control mb-3 text-center" placeholder="Password">
     <button class="btn btn-primary-blue w-100" onclick="doLogin()"><i class="bi bi-box-arrow-in-right"></i> Masuk</button>
-    <!--<p class="text-muted mt-3" style="font-size:0.75rem;"><i class="bi bi-info-circle"></i> Default: admin / admin123</p> -->
+    <!--<p class="text-muted mt-3" style="font-size:0.75rem;"><i class="bi bi-info-circle"></i> Default: admin / admin123</p>-->
   </div>
 </div>
 
@@ -313,8 +312,8 @@ main, header, nav, footer { position: relative; z-index: 1; }
         <div class="col-md-6"><label class="form-label">Program <span class="text-danger">*</span></label><select class="form-select" id="muridProgram" onchange="updateTargetHafalan()" required><option value="">-- Pilih Program --</option><option value="Pondok">Pondok</option><option value="Reguler">Reguler</option></select></div>
         <div class="col-md-6"><label class="form-label">Target Hafalan Semester (Halaman)</label><input type="number" class="form-control" id="muridTarget" readonly style="background:#f8fafc;"><small class="text-muted">Otomatis: Pondok = 20, Reguler = 10</small></div>
         <div class="col-md-6"><label class="form-label">NIS (opsional)</label><input type="text" class="form-control" id="muridNis" placeholder="Nomor Induk Siswa"></div>
-        <div class="col-md-6"><label class="form-label">Mulai Hafalan <span class="text-danger">*</span></label><input type="date" class="form-control" id="muridMulai" required></div>
-        <div class="col-md-6"><label class="form-label">Akhir Hafalan <span class="text-danger">*</span></label><input type="date" class="form-control" id="muridAkhir" required></div>
+        <div class="col-md-6"><label class="form-label">Ayat Mulai Hafalan <span class="text-danger">*</span></label><input type="text" class="form-control" id="muridMulai" placeholder="Contoh: Al-Fatihah: 1" required></div>
+        <div class="col-md-6"><label class="form-label">Target Akhir Hafalan <span class="text-danger">*</span></label><input type="text" class="form-control" id="muridAkhir" placeholder="Contoh: Al-Baqarah: 150" required></div>
       </div>
     </div>
     <div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button><button class="btn btn-primary-blue btn-sm" onclick="saveMurid()"><i class="bi bi-save"></i> Simpan</button></div>
@@ -369,7 +368,6 @@ function showToast(msg, type='success') {
 
 function escapeHtml(str) { if (str === null || str === undefined) return ''; return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function escapeAttr(str) { return String(str||'').replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
-function formatDate(d) { if (!d) return '-'; try { const date = new Date(d); if (isNaN(date)) return d; return date.toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' }); } catch(e) { return d; } }
 function generateExcel(data, sheetName, filename, cols=null) {
   const ws = XLSX.utils.json_to_sheet(data); if (cols) ws['!cols'] = cols;
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, sheetName);
@@ -392,7 +390,6 @@ function doLogin() {
     document.getElementById('btnLogout').classList.remove('d-none');
     document.getElementById('btnLogoutMobile').classList.remove('d-none');
     showAdminActions(true);
-    fetchData();
     showToast('Login berhasil! Selamat datang Admin', 'success');
   } else {
     showToast('Username atau password salah', 'error');
@@ -424,13 +421,14 @@ function showAdminActions(show) {
 
 // --- API CALLS (GOOGLE SHEETS) ---
 async function fetchData() {
-  if (API_URL === 'https://script.google.com/macros/s/AKfycbxBj-k7ADbv92k0i_oVs2UepNxKpCr_xFr_FvVS6DvR1jEBLh79AhIyyxewyseSwuKW/exec') {
+  if (API_URL !== 'https://script.google.com/macros/s/AKfycbxBj-k7ADbv92k0i_oVs2UepNxKpCr_xFr_FvVS6DvR1jEBLh79AhIyyxewyseSwuKW/exec') {
     showToast('Harap set URL API terlebih dahulu di kode!', 'error');
     return;
   }
   showToast('Memuat data dari server...', 'info');
   try {
-    const res = await fetch(API_URL);
+    // CACHE BUSTER: Mencegah browser mengambil data lama yang tersimpan di cache
+    const res = await fetch(API_URL + '?_=' + new Date().getTime());
     const json = await res.json();
     if (json.status === 'success') {
       dataKelas = json.data.kelas || [];
@@ -578,7 +576,7 @@ function renderMurid() {
   if (filtered.length === 0) { tbody.innerHTML = `<div class="empty-state"><i class="bi bi-people"></i><h6>Belum ada data murid</h6></div>`; return; }
   tbody.innerHTML = `<table class="table table-custom"><thead><tr><th style="width:40px;">No</th><th>Nama Lengkap</th><th>Kelas</th><th>Program</th><th>Target</th><th>Mulai</th><th>Akhir</th>${isLoggedIn?'<th style="width:120px;">Aksi</th>':''}</tr></thead><tbody>${filtered.map((m, i) => {
     const kelas = dataKelas.find(k => k.id == m.kelasId);
-    return `<tr><td>${i+1}</td><td><strong>${escapeHtml(m.nama)}</strong><br><small class="text-muted">${escapeHtml(m.nis||'')}</small></td><td>${kelas ? escapeHtml(kelas.nama) : '-'}</td><td><span class="badge-program-${(m.program||'').toLowerCase()}">${m.program||'-'}</span></td><td><strong>${m.target||0}</strong> hal</td><td>${formatDate(m.mulai)}</td><td>${formatDate(m.akhir)}</td>${isLoggedIn?`<td><button class="btn btn-outline-blue btn-action" onclick="openModalMurid(${m.id})"><i class="bi bi-pencil"></i></button><button class="btn btn-outline-danger btn-action" onclick="deleteMurid(${m.id})"><i class="bi bi-trash"></i></button></td>`:''}</tr>`;
+    return `<tr><td>${i+1}</td><td><strong>${escapeHtml(m.nama)}</strong><br><small class="text-muted">${escapeHtml(m.nis||'')}</small></td><td>${kelas ? escapeHtml(kelas.nama) : '-'}</td><td><span class="badge-program-${(m.program||'').toLowerCase()}">${m.program||'-'}</span></td><td><strong>${m.target||0}</strong> hal</td><td>${escapeHtml(m.mulai||'-')}</td><td>${escapeHtml(m.akhir||'-')}</td>${isLoggedIn?`<td><button class="btn btn-outline-blue btn-action" onclick="openModalMurid(${m.id})"><i class="bi bi-pencil"></i></button><button class="btn btn-outline-danger btn-action" onclick="deleteMurid(${m.id})"><i class="bi bi-trash"></i></button></td>`:''}</tr>`;
   }).join('')}</tbody></table>`;
 }
 
@@ -610,13 +608,13 @@ async function saveMurid() {
   const nama = document.getElementById('muridNama').value.trim(); 
   const kelasId = document.getElementById('muridKelas').value; 
   const program = document.getElementById('muridProgram').value; 
-  const mulai = document.getElementById('muridMulai').value; 
-  const akhir = document.getElementById('muridAkhir').value;
+  const mulai = document.getElementById('muridMulai').value.trim(); 
+  const akhir = document.getElementById('muridAkhir').value.trim();
   if (!nama) return showToast('Nama wajib diisi', 'error'); 
   if (!kelasId) return showToast('Kelas wajib dipilih', 'error'); 
   if (!program) return showToast('Program wajib dipilih', 'error'); 
-  if (!mulai) return showToast('Tanggal mulai wajib diisi', 'error'); 
-  if (!akhir) return showToast('Tanggal akhir wajib diisi', 'error');
+  if (!mulai) return showToast('Ayat mulai wajib diisi', 'error'); 
+  if (!akhir) return showToast('Target akhir wajib diisi', 'error');
   const target = program === 'Pondok' ? 20 : 10; 
   const nis = document.getElementById('muridNis').value.trim(); 
   const id = document.getElementById('muridId').value;
@@ -643,7 +641,7 @@ async function deleteMurid(id) {
 }
 
 function downloadTemplateMurid() { 
-  generateExcel([{ 'Nama Lengkap':'Ahmad Fauzan', 'Kelas':'X IPA 1', 'Program':'Pondok', 'NIS':'2025001', 'Mulai Hafalan':'2025-01-01', 'Akhir Hafalan':'2025-06-30' }], 'Murid', 'Template_Murid.xlsx', [{wch:25},{wch:15},{wch:12},{wch:12},{wch:15},{wch:15}]); 
+  generateExcel([{ 'Nama Lengkap':'Ahmad Fauzan', 'Kelas':'X IPA 1', 'Program':'Pondok', 'NIS':'2025001', 'Mulai Hafalan':'Al-Fatihah: 1', 'Akhir Hafalan':'Al-Baqarah: 150' }], 'Murid', 'Template_Murid.xlsx', [{wch:25},{wch:15},{wch:12},{wch:12},{wch:20},{wch:20}]); 
   showToast('Template Excel murid diunduh'); 
 }
 
@@ -670,7 +668,7 @@ async function importMurid(event) {
         }
         const program = (r['Program']||'Reguler').trim(); 
         const target = program === 'Pondok' ? 20 : 10;
-        const payload = { id: Date.now()+Math.random(), nama: String(r['Nama Lengkap']), kelasId: kelas?kelas.id:'', program, target, nis: r['NIS'] ? String(r['NIS']) : '', mulai: r['Mulai Hafalan'] ? formatDateExcel(r['Mulai Hafalan']) : '', akhir: r['Akhir Hafalan'] ? formatDateExcel(r['Akhir Hafalan']) : '' };
+        const payload = { id: Date.now()+Math.random(), nama: String(r['Nama Lengkap']), kelasId: kelas?kelas.id:'', program, target, nis: r['NIS'] ? String(r['NIS']) : '', mulai: r['Mulai Hafalan'] ? String(r['Mulai Hafalan']) : '', akhir: r['Akhir Hafalan'] ? String(r['Akhir Hafalan']) : '' };
         await apiPost('create', 'murid', payload); 
         dataMurid.push(payload); 
         count++;
@@ -835,14 +833,6 @@ async function importJurnal(event) {
   event.target.value = '';
 }
 
-function formatDateExcel(val) { 
-  if (!val) return ''; 
-  if (typeof val === 'string') return val; 
-  if (val instanceof Date) return val.toISOString().split('T')[0]; 
-  if (typeof val === 'number') { const date = new Date((val - 25569) * 86400 * 1000); return date.toISOString().split('T')[0]; } 
-  return String(val); 
-}
-
 // === REKAP & STATISTIK ===
 function togglePeriodeRekap() { 
   const periode = document.getElementById('rekapPeriode').value; 
@@ -936,13 +926,15 @@ function exportRekapExcel() {
 
 // === INIT ===
 document.addEventListener('DOMContentLoaded', () => {
+  // PENTING: Load data pertama kali, agar yang belum login bisa lihat data (read-only)
+  fetchData();
+  
   if (sessionStorage.getItem('tahfiz_logged_in') === 'true') {
     isLoggedIn = true;
     document.getElementById('loginOverlay').style.display = 'none';
     document.getElementById('btnLogout').classList.remove('d-none');
     document.getElementById('btnLogoutMobile').classList.remove('d-none');
     showAdminActions(true);
-    fetchData();
   } else {
     showAdminActions(false);
   }
