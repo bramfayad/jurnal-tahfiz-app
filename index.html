@@ -29,7 +29,7 @@ main, header, nav, footer { position: relative; z-index: 1; }
 
 #loginOverlay {
   position: fixed; inset: 0; background: rgba(10, 58, 104, 0.95); z-index: 9998;
-  display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);
+  display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px);
 }
 .login-box {
   background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);
@@ -38,9 +38,10 @@ main, header, nav, footer { position: relative; z-index: 1; }
 .login-box::before { content:''; position:absolute; top:0; left:0; right:0; height:10px; background: linear-gradient(90deg, var(--primary-blue) 0%, var(--accent-orange) 100%); }
 
 .header-gradient { background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 60%, var(--primary-blue) 100%); position: relative; overflow: hidden; }
-.header-pattern { position: absolute; inset: 0; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cpath d='M30 0 L37 23 L60 30 L37 37 L30 60 L23 37 L0 30 L23 23 Z' fill='none' stroke='white' stroke-width='0.8' opacity='0.12'/%3E%3C/svg%3E"); }
-.header-decoration { position: absolute; right: -60px; top: -60px; width: 220px; height: 220px; background: radial-gradient(circle, rgba(249,115,22,0.35) 0%, transparent 70%); border-radius: 50%; }
-.header-decoration-2 { position: absolute; left: -40px; bottom: -40px; width: 150px; height: 150px; background: radial-gradient(circle, rgba(251,191,36,0.2) 0%, transparent 70%); border-radius: 50%; }
+.header-pattern { position: absolute; inset: 0; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cpath d='M30 0 L37 23 L60 30 L37 37 L30 60 L23 37 L0 30 L23 23 Z' fill='none' stroke='white' stroke-width='0.8' opacity='0.12'/%3E%3C/svg%3E"); pointer-events: none; }
+.header-decoration { position: absolute; right: -60px; top: -60px; width: 220px; height: 220px; background: radial-gradient(circle, rgba(249,115,22,0.35) 0%, transparent 70%); border-radius: 50%; pointer-events: none; }
+.header-decoration-2 { position: absolute; left: -40px; bottom: -40px; width: 150px; height: 150px; background: radial-gradient(circle, rgba(251,191,36,0.2) 0%, transparent 70%); border-radius: 50%; pointer-events: none; }
+.header-gradient .container { position: relative; z-index: 2; }
 
 .btn-tab { background: transparent; border: none; color: var(--text-muted); font-weight: 500; border-bottom: 3px solid transparent; margin-bottom: -3px; padding: 12px 18px; transition: all 0.3s; border-radius: 8px 8px 0 0; display: flex; align-items: center; gap: 8px; white-space: nowrap; cursor: pointer; }
 .btn-tab:hover { color: var(--accent-orange); background: var(--accent-orange-soft); }
@@ -124,6 +125,7 @@ main, header, nav, footer { position: relative; z-index: 1; }
 </head>
 <body>
 
+<!-- LOGIN OVERLAY -->
 <div id="loginOverlay">
   <div class="login-box">
     <div class="logo-container mx-auto mb-3" style="width:70px; height:70px;">
@@ -134,7 +136,7 @@ main, header, nav, footer { position: relative; z-index: 1; }
     <input type="text" id="loginUser" class="form-control mb-2 text-center" placeholder="Username">
     <input type="password" id="loginPass" class="form-control mb-3 text-center" placeholder="Password">
     <button class="btn btn-primary-blue w-100" onclick="doLogin()"><i class="bi bi-box-arrow-in-right"></i> Masuk</button>
-    <!--<p class="text-muted mt-3" style="font-size:0.75rem;"><i class="bi bi-info-circle"></i> Default: admin / admin123</p>-->
+    <button class="btn btn-link btn-sm mt-2 text-muted" onclick="hideLoginOverlay()"><i class="bi bi-arrow-left"></i> Kembali (Mode Lihat)</button>
   </div>
 </div>
 
@@ -153,8 +155,10 @@ main, header, nav, footer { position: relative; z-index: 1; }
       </div>
       <div class="d-none d-lg-block text-end">
         <p class="mb-0 font-arabic" style="font-size:1.1rem; opacity:0.9;">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
+        <button class="btn btn-sm btn-outline-light mt-2" id="btnLogin" onclick="showLoginOverlay()"><i class="bi bi-box-arrow-in-right"></i> Login Admin</button>
         <button class="btn btn-sm btn-outline-light mt-2 d-none" id="btnLogout" onclick="doLogout()"><i class="bi bi-box-arrow-right"></i> Logout</button>
       </div>
+      <button class="btn btn-sm btn-outline-light d-lg-none" id="btnLoginMobile" onclick="showLoginOverlay()"><i class="bi bi-box-arrow-in-right"></i></button>
       <button class="btn btn-sm btn-outline-light d-lg-none d-none" id="btnLogoutMobile" onclick="doLogout()"><i class="bi bi-box-arrow-right"></i></button>
     </div>
   </div>
@@ -236,8 +240,9 @@ main, header, nav, footer { position: relative; z-index: 1; }
           <div class="row g-2 align-items-center">
             <div class="col-md-3"><select class="form-select" id="filterJurnalKelas" onchange="updateFilterJurnalMurid(); renderJurnal()"><option value="">Semua Kelas</option></select></div>
             <div class="col-md-3"><select class="form-select" id="filterJurnalMurid" onchange="renderJurnal()"><option value="">Semua Murid</option></select></div>
-            <div class="col-md-3"><select class="form-select" id="filterJurnalBulan" onchange="renderJurnal()"><option value="">Semua Bulan</option></select></div>
-            <div class="col-md-3 text-md-end"><small class="text-muted">Total: <strong id="totalJurnal">0</strong> setoran</small></div>
+            <div class="col-md-2"><select class="form-select" id="filterJurnalBulan" onchange="renderJurnal()"><option value="">Semua Bulan</option></select></div>
+            <div class="col-md-3"><input type="text" class="form-control" id="searchJurnal" placeholder="Cari nama murid..." oninput="renderJurnal()"></div>
+            <div class="col-md-1 text-md-end"><small class="text-muted">Total: <strong id="totalJurnal">0</strong></small></div>
           </div>
         </div>
         <div class="table-responsive" id="tableJurnal"></div>
@@ -379,6 +384,13 @@ function generateExcel(data, sheetName, filename, cols=null) {
 }
 
 // --- AUTHENTICATION ---
+function showLoginOverlay() {
+  document.getElementById('loginOverlay').style.display = 'flex';
+}
+function hideLoginOverlay() {
+  document.getElementById('loginOverlay').style.display = 'none';
+}
+
 function doLogin() {
   const u = document.getElementById('loginUser').value;
   const p = document.getElementById('loginPass').value;
@@ -386,7 +398,9 @@ function doLogin() {
   if (u === ADMIN_USER && p === ADMIN_PASS) {
     isLoggedIn = true;
     sessionStorage.setItem('tahfiz_logged_in', 'true');
-    document.getElementById('loginOverlay').style.display = 'none';
+    hideLoginOverlay();
+    document.getElementById('btnLogin').classList.add('d-none');
+    document.getElementById('btnLoginMobile').classList.add('d-none');
     document.getElementById('btnLogout').classList.remove('d-none');
     document.getElementById('btnLogoutMobile').classList.remove('d-none');
     showAdminActions(true);
@@ -399,7 +413,8 @@ function doLogin() {
 function doLogout() {
   isLoggedIn = false;
   sessionStorage.removeItem('tahfiz_logged_in');
-  document.getElementById('loginOverlay').style.display = 'flex';
+  document.getElementById('btnLogin').classList.remove('d-none');
+  document.getElementById('btnLoginMobile').classList.remove('d-none');
   document.getElementById('btnLogout').classList.add('d-none');
   document.getElementById('btnLogoutMobile').classList.add('d-none');
   showAdminActions(false);
@@ -427,17 +442,24 @@ async function fetchData() {
   }
   showToast('Memuat data dari server...', 'info');
   try {
-    // CACHE BUSTER: Mencegah browser mengambil data lama yang tersimpan di cache
-    const res = await fetch(API_URL + '?_=' + new Date().getTime());
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'read' })
+    });
     const json = await res.json();
-    if (json.status === 'success') {
+    if (json.status === 'success' && json.data) {
       dataKelas = json.data.kelas || [];
       dataMurid = json.data.murid || [];
       dataJurnal = json.data.jurnal || [];
       renderKelas(); renderMurid(); renderJurnal();
       showToast('Data berhasil dimuat', 'success');
-    } else { showToast('Gagal memuat data', 'error'); }
-  } catch (e) { showToast('Error koneksi: ' + e.message, 'error'); }
+    } else { 
+      showToast('Gagal memuat data: ' + (json.message || 'Format tidak valid'), 'error'); 
+    }
+  } catch (e) { 
+    showToast('Error koneksi: ' + e.message, 'error'); 
+  }
 }
 
 async function apiPost(action, table, data) {
@@ -699,17 +721,22 @@ function renderJurnal() {
   const filterBulan = document.getElementById('filterJurnalBulan'); 
   const currBulan = filterBulan.value;
   filterBulan.innerHTML = '<option value="">Semua Bulan</option>' + BULAN_LIST.map(b => `<option value="${b}" ${currBulan==b?'selected':''}>${b}</option>`).join('');
+  
   const kelasFilter = filterKelas.value; 
   const muridFilter = document.getElementById('filterJurnalMurid').value; 
   const bulanFilter = filterBulan.value;
+  const searchJurnal = (document.getElementById('searchJurnal')?.value || '').toLowerCase();
+  
   let filtered = dataJurnal.filter(j => { 
     const murid = dataMurid.find(m => m.id == j.muridId); 
     if (!murid) return false; 
     if (kelasFilter && murid.kelasId != kelasFilter) return false; 
     if (muridFilter && j.muridId != muridFilter) return false; 
-    if (bulanFilter && j.bulan !== bulanFilter) return false; 
+    if (bulanFilter && j.bulan !== bulanFilter) return false;
+    if (searchJurnal && !murid.nama.toLowerCase().includes(searchJurnal)) return false; 
     return true; 
   });
+  
   filtered.sort((a,b) => (b.id||0) - (a.id||0));
   document.getElementById('totalJurnal').textContent = filtered.length; 
   const tbody = document.getElementById('tableJurnal');
@@ -926,12 +953,12 @@ function exportRekapExcel() {
 
 // === INIT ===
 document.addEventListener('DOMContentLoaded', () => {
-  // PENTING: Load data pertama kali, agar yang belum login bisa lihat data (read-only)
-  fetchData();
+  fetchData(); // Load data pertama kali (Mode Lihat)
   
   if (sessionStorage.getItem('tahfiz_logged_in') === 'true') {
     isLoggedIn = true;
-    document.getElementById('loginOverlay').style.display = 'none';
+    document.getElementById('btnLogin').classList.add('d-none');
+    document.getElementById('btnLoginMobile').classList.add('d-none');
     document.getElementById('btnLogout').classList.remove('d-none');
     document.getElementById('btnLogoutMobile').classList.remove('d-none');
     showAdminActions(true);
@@ -940,7 +967,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// Enter key listener for login
 document.getElementById('loginPass').addEventListener('keyup', function(event) {
   if (event.key === 'Enter') doLogin();
 });
