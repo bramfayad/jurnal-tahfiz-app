@@ -381,6 +381,16 @@ function generateExcel(data, sheetName, filename, cols=null) {
   setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
 }
 
+function normalizeExcelRows(rawRows) {
+  return rawRows.map(row => {
+    const newRow = {};
+    for (let key in row) {
+      newRow[key.trim().toLowerCase()] = row[key];
+    }
+    return newRow;
+  });
+}
+
 function showLoginOverlay() { document.getElementById('loginOverlay').style.display = 'flex'; }
 function hideLoginOverlay() { document.getElementById('loginOverlay').style.display = 'none'; }
 
@@ -547,15 +557,27 @@ async function importKelas(event) {
     try {
       const wb = XLSX.read(e.target.result, { type:'array' }); 
       const ws = wb.Sheets[wb.SheetNames[0]]; 
-      const rows = XLSX.utils.sheet_to_json(ws);
-      let count = 0; showToast('Mengimpor data...', 'info');
+      const rawRows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      const rows = normalizeExcelRows(rawRows);
+      
+      let count = 0, failed = 0; 
+      showToast('Mengimpor data...', 'info');
       for (const r of rows) {
-        if (r['Nama Kelas']) {
-          const payload = { id: Date.now().toString()+Math.random(), nama: String(r['Nama Kelas']), wali: r['Wali Kelas']||'', tahun: r['Tahun Ajaran']||'' };
-          await apiPost('create', 'kelas', payload); dataKelas.push(payload); count++;
-        }
+        const namaKelas = String(r['nama kelas'] || '').trim();
+        if (!namaKelas) { failed++; continue; }
+        
+        const payload = { 
+          id: Date.now().toString()+Math.random(), 
+          nama: namaKelas, 
+          wali: String(r['wali kelas'] || '').trim(), 
+          tahun: String(r['tahun ajaran'] || '').trim() 
+        };
+        await apiPost('create', 'kelas', payload); 
+        dataKelas.push(payload); 
+        count++;
       }
-      renderKelas(); showToast(`${count} kelas berhasil diimport`);
+      renderKelas(); 
+      showToast(`Import selesai: ${count} kelas berhasil${failed ? `, ${failed} baris gagal` : ''}`);
     } catch(err) { showToast('Gagal import: '+err.message, 'error'); }
   }; 
   reader.readAsArrayBuffer(file); 
@@ -664,27 +686,42 @@ async function importMurid(event) {
     try { 
       const wb = XLSX.read(e.target.result, { type:'array' }); 
       const ws = wb.Sheets[wb.SheetNames[0]]; 
-      const rows = XLSX.utils.sheet_to_json(ws); 
+      const rawRows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      const rows = normalizeExcelRows(rawRows);
+      
       let count = 0, failed = 0; 
       showToast('Mengimpor data...', 'info');
       for (const r of rows) {
-        if (!r['Nama Lengkap']) { failed++; continue; }
-        const kelasNama = String(r['Kelas']||'').trim(); 
+        const namaLengkap = String(r['nama lengkap'] || '').trim();
+        if (!namaLengkap) { failed++; continue; }
+        
+        const kelasNama = String(r['kelas']||'').trim(); 
         let kelas = dataKelas.find(k => k.nama.toLowerCase() === kelasNama.toLowerCase());
         if (!kelas && kelasNama) { 
           kelas = { id: Date.now().toString()+Math.random(), nama: kelasNama, wali:'', tahun:'' }; 
           await apiPost('create', 'kelas', kelas); 
           dataKelas.push(kelas); 
         }
-        const program = (r['Program']||'Reguler').trim(); 
+        const programRaw = String(r['program'] || 'Reguler').trim().toLowerCase();
+        const program = programRaw === 'pondok' ? 'Pondok' : 'Reguler'; 
         const target = program === 'Pondok' ? 20 : 10;
-        const payload = { id: Date.now().toString()+Math.random(), nama: String(r['Nama Lengkap']), kelasId: kelas?String(kelas.id):'', program, target, nis: r['NIS'] ? String(r['NIS']) : '', mulai: r['Mulai Hafalan'] ? String(r['Mulai Hafalan']) : '', akhir: r['Akhir Hafalan'] ? String(r['Akhir Hafalan']) : '' };
+        
+        const payload = { 
+          id: Date.now().toString()+Math.random(), 
+          nama: namaLengkap, 
+          kelasId: kelas?String(kelas.id):'', 
+          program, 
+          target, 
+          nis: r['nis'] ? String(r['nis']) : '', 
+          mulai: String(r['mulai hafalan'] || '').trim(), 
+          akhir: String(r['akhir hafalan'] || '').trim() 
+        };
         await apiPost('create', 'murid', payload); 
         dataMurid.push(payload); 
         count++;
       }
       renderMurid(); 
-      showToast(`${count} murid berhasil diimport${failed?` (${failed} baris gagal)`:''}`);
+      showToast(`Import selesai: ${count} murid berhasil${failed ? `, ${failed} baris gagal` : ''}`);
     } catch(err) { showToast('Gagal import: '+err.message, 'error'); }
   }; 
   reader.readAsArrayBuffer(file); 
@@ -826,21 +863,32 @@ async function importJurnal(event) {
     try { 
       const wb = XLSX.read(e.target.result, { type:'array' }); 
       const ws = wb.Sheets[wb.SheetNames[0]]; 
-      const rows = XLSX.utils.sheet_to_json(ws); 
+      const rawRows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      const rows = normalizeExcelRows(rawRows);
+      
       let count = 0, failed = 0; 
       showToast('Mengimpor data...', 'info');
       for (const r of rows) {
-        if (!r['Nama Murid']) { failed++; continue; } 
-        const namaMurid = String(r['Nama Murid']).trim(); 
-        const murid = dataMurid.find(m => m.nama.toLowerCase() === namaMurid.toLowerCase());
+        const namaMuridExcel = String(r['nama murid'] || '').trim();
+        if (!namaMuridExcel) { failed++; continue; } 
+        
+        const murid = dataMurid.find(m => m.nama.toLowerCase().replace(/\s+/g, ' ') === namaMuridExcel.toLowerCase().replace(/\s+/g, ' '));
         if (!murid) { failed++; continue; }
-        const payload = { id: Date.now().toString()+Math.random(), muridId: String(murid.id), bulan: r['Bulan Pelaporan'] ? String(r['Bulan Pelaporan']).trim() : '', surat: r['Surat/Ayat Terakhir'] ? String(r['Surat/Ayat Terakhir']) : '', halaman: r['Jumlah Halaman'] ? Number(r['Jumlah Halaman']) : 0, catatan: r['Catatan'] ? String(r['Catatan']) : '' };
+        
+        const payload = { 
+          id: Date.now().toString()+Math.random(), 
+          muridId: String(murid.id), 
+          bulan: String(r['bulan pelaporan'] || '').trim(), 
+          surat: String(r['surat/ayat terakhir'] || '').trim(), 
+          halaman: Number(r['jumlah halaman'] || 0), 
+          catatan: String(r['catatan'] || '').trim() 
+        };
         await apiPost('create', 'jurnal', payload); 
         dataJurnal.push(payload); 
         count++;
       }
       renderJurnal(); 
-      showToast(`${count} setoran berhasil diimport${failed?` (${failed} baris gagal)`:''}`);
+      showToast(`Import selesai: ${count} setoran berhasil${failed ? `, ${failed} baris gagal` : ''}`);
     } catch(err) { showToast('Gagal import: '+err.message, 'error'); }
   }; 
   reader.readAsArrayBuffer(file); 
