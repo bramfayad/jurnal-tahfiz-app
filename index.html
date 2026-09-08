@@ -567,7 +567,7 @@ async function importKelas(event) {
         if (!namaKelas) { failed++; continue; }
         
         const payload = { 
-          id: Date.now().toString()+Math.random(), 
+          id: (Date.now() + count).toString(), 
           nama: namaKelas, 
           wali: String(r['wali kelas'] || '').trim(), 
           tahun: String(r['tahun ajaran'] || '').trim() 
@@ -698,7 +698,7 @@ async function importMurid(event) {
         const kelasNama = String(r['kelas']||'').trim(); 
         let kelas = dataKelas.find(k => k.nama.toLowerCase() === kelasNama.toLowerCase());
         if (!kelas && kelasNama) { 
-          kelas = { id: Date.now().toString()+Math.random(), nama: kelasNama, wali:'', tahun:'' }; 
+          kelas = { id: (Date.now() + count + 100).toString(), nama: kelasNama, wali:'', tahun:'' }; 
           await apiPost('create', 'kelas', kelas); 
           dataKelas.push(kelas); 
         }
@@ -707,7 +707,7 @@ async function importMurid(event) {
         const target = program === 'Pondok' ? 20 : 10;
         
         const payload = { 
-          id: Date.now().toString()+Math.random(), 
+          id: (Date.now() + count + 200).toString(), 
           nama: namaLengkap, 
           kelasId: kelas?String(kelas.id):'', 
           program, 
@@ -876,7 +876,7 @@ async function importJurnal(event) {
         if (!murid) { failed++; continue; }
         
         const payload = { 
-          id: Date.now().toString()+Math.random(), 
+          id: (Date.now() + count + 300).toString(), 
           muridId: String(murid.id), 
           bulan: String(r['bulan pelaporan'] || '').trim(), 
           surat: String(r['surat/ayat terakhir'] || '').trim(), 
