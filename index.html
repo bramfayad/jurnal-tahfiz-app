@@ -121,7 +121,6 @@ main, header, nav, footer { position: relative; z-index: 1; }
 .scrollable-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .scrollable-tabs::-webkit-scrollbar { height: 4px; }
 .scrollable-tabs::-webkit-scrollbar-thumb { background: var(--primary-blue-soft); border-radius: 2px; }
-
 .chart-container { position: relative; height: 400px; width: 100%; }
 </style>
 </head>
@@ -418,8 +417,8 @@ function showAdminActions(show) {
   ['kelasActions', 'muridActions', 'jurnalActions'].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
-      if (show) { el.classList.remove('d-none'); el.style.display = 'flex'; }
-      else { el.classList.add('d-none'); el.style.display = 'none'; }
+      if (show) { el.classList.remove('d-none'); }
+      else { el.classList.add('d-none'); }
     }
   });
   if (dataKelas.length > 0) renderKelas();
@@ -493,7 +492,7 @@ function renderKelas() {
 }
 
 function openModalKelas(id=null) {
-  if(!isLoggedIn) return;
+  if(!isLoggedIn) return showToast('Akses ditolak! Silakan login sebagai Admin.', 'error');
   document.getElementById('modalKelasTitle').textContent = id ? 'Edit Kelas' : 'Tambah Kelas';
   document.getElementById('kelasId').value = id || '';
   if (id) {
@@ -524,7 +523,7 @@ async function saveKelas() {
 }
 
 async function deleteKelas(id) {
-  if(!isLoggedIn) return;
+  if(!isLoggedIn) return showToast('Akses ditolak! Silakan login sebagai Admin.', 'error');
   if (!confirm('Hapus kelas ini?')) return;
   showToast('Menghapus...', 'info');
   if (await apiPost('delete', 'kelas', { id: String(id) })) { 
@@ -540,7 +539,7 @@ function downloadTemplateKelas() {
 }
 
 async function importKelas(event) {
-  if(!isLoggedIn) return; 
+  if(!isLoggedIn) return showToast('Akses ditolak! Silakan login sebagai Admin.', 'error');
   const file = event.target.files[0]; 
   if (!file) return;
   const reader = new FileReader();
@@ -592,7 +591,7 @@ function renderMurid() {
 }
 
 function openModalMurid(id=null) {
-  if(!isLoggedIn) return; 
+  if(!isLoggedIn) return showToast('Akses ditolak! Silakan login sebagai Admin.', 'error');
   document.getElementById('modalMuridTitle').textContent = id ? 'Edit Murid' : 'Tambah Murid'; 
   document.getElementById('muridId').value = id || ''; 
   populateKelasOptions('muridKelas');
@@ -640,7 +639,7 @@ async function saveMurid() {
 }
 
 async function deleteMurid(id) {
-  if(!isLoggedIn) return; 
+  if(!isLoggedIn) return showToast('Akses ditolak! Silakan login sebagai Admin.', 'error');
   if (!confirm('Hapus murid ini?')) return; 
   showToast('Menghapus...', 'info');
   if (await apiPost('delete', 'murid', { id: String(id) })) { 
@@ -657,7 +656,7 @@ function downloadTemplateMurid() {
 }
 
 async function importMurid(event) {
-  if(!isLoggedIn) return; 
+  if(!isLoggedIn) return showToast('Akses ditolak! Silakan login sebagai Admin.', 'error');
   const file = event.target.files[0]; 
   if (!file) return; 
   const reader = new FileReader();
@@ -757,7 +756,7 @@ function hideMuridOptions() { document.getElementById('muridDropdownOptions').cl
 function selectMuridJurnal(id, nama) { document.getElementById('jurnalMuridId').value = id; document.getElementById('jurnalMuridSearch').value = nama; hideMuridOptions(); }
 
 function openModalJurnal(id=null) {
-  if(!isLoggedIn) return; 
+  if(!isLoggedIn) return showToast('Akses ditolak! Silakan login sebagai Admin.', 'error');
   document.getElementById('modalJurnalTitle').textContent = id ? 'Edit Setoran' : 'Tambah Setoran'; 
   document.getElementById('jurnalId').value = id || ''; 
   document.getElementById('jurnalMuridId').value = ''; 
@@ -803,7 +802,7 @@ async function saveJurnal() {
 }
 
 async function deleteJurnal(id) {
-  if(!isLoggedIn) return; 
+  if(!isLoggedIn) return showToast('Akses ditolak! Silakan login sebagai Admin.', 'error');
   if (!confirm('Hapus setoran ini?')) return; 
   showToast('Menghapus...', 'info');
   if (await apiPost('delete', 'jurnal', { id: String(id) })) { 
@@ -819,7 +818,7 @@ function downloadTemplateJurnal() {
 }
 
 async function importJurnal(event) {
-  if(!isLoggedIn) return; 
+  if(!isLoggedIn) return showToast('Akses ditolak! Silakan login sebagai Admin.', 'error');
   const file = event.target.files[0]; 
   if (!file) return; 
   const reader = new FileReader();
@@ -931,53 +930,85 @@ function renderChart(rekapData) {
   
   if (muridFilter) { 
     const muridNama = rekapData[0].murid.nama;
+    const dataTarget = Number(rekapData[0].target) || 0;
     
     if (periode === 'bulanan' && bulanFilter) {
-      titleText = `Hafalan ${muridNama} Bulan ${bulanFilter}`;
-      labels = [bulanFilter];
+      titleText = `Evaluasi Hafalan ${muridNama} Bulan ${bulanFilter}`;
+      labels = [muridNama];
       const dataHalaman = rekapData[0].jurnals
         .filter(j => String(j.bulan||'').trim().toLowerCase() === bulanFilter.toLowerCase())
         .reduce((s,j) => s + (Number(j.halaman)||0), 0); 
-      datasets = [{
-        label: `Jumlah Halaman`,
-        data: [dataHalaman],
-        backgroundColor: 'rgba(249, 115, 22, 0.8)',
-        borderColor: '#ea580c',
-        borderWidth: 2,
-        borderRadius: 6
-      }];
+        
+      datasets = [
+        { 
+          label: `Capaian Bulan ${bulanFilter}`, 
+          data: [dataHalaman], 
+          backgroundColor: 'rgba(13, 79, 139, 0.8)', 
+          borderColor: '#0d4f8b', 
+          borderWidth: 2, 
+          borderRadius: 6 
+        }, 
+        { 
+          label: 'Target Semester', 
+          data: [dataTarget], 
+          backgroundColor: 'rgba(249, 115, 22, 0.6)', 
+          borderColor: '#ea580c', 
+          borderWidth: 2, 
+          borderRadius: 6 
+        }
+      ];
     } else {
-      titleText = `Progres Hafalan ${muridNama} per Bulan`;
-      labels = BULAN_LIST;
-      const dataHalaman = BULAN_LIST.map(bulan => { 
-        const jurnals = rekapData[0].jurnals.filter(j => String(j.bulan||'').trim().toLowerCase() === bulan.toLowerCase()); 
-        return jurnals.reduce((s,j) => s + (Number(j.halaman)||0), 0); 
-      }); 
-      datasets = [{
-        label: 'Halaman per Bulan',
-        data: dataHalaman,
-        backgroundColor: 'rgba(13, 79, 139, 0.8)',
-        borderColor: '#0d4f8b',
-        borderWidth: 2,
-        borderRadius: 6
-      }];
+      titleText = `Evaluasi Hafalan ${muridNama}`;
+      labels = [muridNama];
+      const dataHalaman = Number(rekapData[0].totalHal) || 0;
+      
+      datasets = [
+        { 
+          label: 'Halaman Tercapai', 
+          data: [dataHalaman], 
+          backgroundColor: 'rgba(13, 79, 139, 0.8)', 
+          borderColor: '#0d4f8b', 
+          borderWidth: 2, 
+          borderRadius: 6 
+        }, 
+        { 
+          label: 'Target Semester', 
+          data: [dataTarget], 
+          backgroundColor: 'rgba(249, 115, 22, 0.6)', 
+          borderColor: '#ea580c', 
+          borderWidth: 2, 
+          borderRadius: 6 
+        }
+      ];
     }
   } else { 
     if (periode === 'bulanan' && bulanFilter) {
-      titleText = `Pencapaian Hafalan Bulan ${bulanFilter} per Murid`;
+      titleText = `Pencapaian vs Target Bulan ${bulanFilter} per Murid`;
       labels = rekapData.map(r => r.murid.nama); 
       const dataHalaman = rekapData.map(r => r.jurnals
         .filter(j => String(j.bulan||'').trim().toLowerCase() === bulanFilter.toLowerCase())
         .reduce((s,j) => s + (Number(j.halaman)||0), 0)
       ); 
-      datasets = [{
-        label: `Halaman Bulan ${bulanFilter}`,
-        data: dataHalaman,
-        backgroundColor: 'rgba(249, 115, 22, 0.8)',
-        borderColor: '#ea580c',
-        borderWidth: 2,
-        borderRadius: 6
-      }];
+      const dataTarget = rekapData.map(r => Number(r.target) || 0); 
+      
+      datasets = [
+        { 
+          label: `Capaian Bulan ${bulanFilter}`, 
+          data: dataHalaman, 
+          backgroundColor: 'rgba(13, 79, 139, 0.8)', 
+          borderColor: '#0d4f8b', 
+          borderWidth: 2, 
+          borderRadius: 6 
+        }, 
+        { 
+          label: 'Target Semester', 
+          data: dataTarget, 
+          backgroundColor: 'rgba(249, 115, 22, 0.6)', 
+          borderColor: '#ea580c', 
+          borderWidth: 2, 
+          borderRadius: 6 
+        }
+      ];
     } else {
       titleText = "Perbandingan Pencapaian vs Target per Murid";
       labels = rekapData.map(r => r.murid.nama); 
@@ -1044,7 +1075,6 @@ function exportRekapExcel() {
 
 document.addEventListener('DOMContentLoaded', () => {
   fetchData();
-  
   if (sessionStorage.getItem('tahfiz_logged_in') === 'true') {
     isLoggedIn = true;
     document.getElementById('btnLogin').classList.add('d-none');
