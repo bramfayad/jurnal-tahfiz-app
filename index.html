@@ -14,7 +14,7 @@
 <style>
 :root {
   --primary-blue: #0d4f8b; --primary-blue-dark: #0a3a68; --primary-blue-light: #2563eb;
-  --primary-blue-soft: #e0ebf5; --accent-orange: #f97316; --accent-orange-dark: #ea580c;
+  --primary-blue- : #e0ebf5; --accent-orange: #f97316; --accent-orange-dark: #ea580c;
   --accent-orange-light: #fbbf24; --accent-orange-soft: #fff3e0; --text-dark: #1e293b; --text-muted: #64748b;
 }
 * { font-family: 'Poppins', sans-serif; }
@@ -102,7 +102,7 @@ main, header, nav, footer { position: relative; z-index: 1; }
 .footer-pattern { position: absolute; inset: 0; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M20 0 L25 15 L40 20 L25 25 L20 40 L15 25 L0 20 L15 15 Z' fill='none' stroke='white' stroke-width='0.5' opacity='0.1'/%3E%3C/svg%3E"); }
 
 .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
-.toast-custom { background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); padding: 14px 20px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; min-width: 300px; border-left: 4px solid var(--primary-blue); animation: slideIn 0.3s ease; }
+.toast-custom { background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); padding: 14px 20px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; min-width: 300px; border-left: 4px solid var(--primary-blue); animation: slideIn 0.3s ease; transition: all .3s; }
 .toast-custom.success { border-left-color: #059669; }
 .toast-custom.error { border-left-color: #dc2626; }
 .toast-custom.warning { border-left-color: var(--accent-orange); }
@@ -118,13 +118,22 @@ main, header, nav, footer { position: relative; z-index: 1; }
 .table-responsive { border-radius: 12px; }
 .btn-action { padding: 4px 10px; font-size: 0.78rem; border-radius: 6px; margin: 0 2px; }
 .logo-container { width: 56px; height: 56px; background: white; border-radius: 50%; padding: 6px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.15); flex-shrink: 0; }
-.scrollable-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.scrollable-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-grow: 1; }
 .scrollable-tabs::-webkit-scrollbar { height: 4px; }
 .scrollable-tabs::-webkit-scrollbar-thumb { background: var(--primary-blue-soft); border-radius: 2px; }
 .chart-container { position: relative; height: 400px; width: 100%; }
+
+/* Indikator memuat data */
+#loadingBar { position: fixed; top: 0; left: 0; height: 3px; width: 0; background: linear-gradient(90deg, var(--accent-orange), var(--accent-orange-light)); z-index: 10000; opacity: 0; transition: width .6s ease, opacity .3s; }
+#loadingBar.active { width: 80%; opacity: 1; }
+#syncInfo { font-size: .75rem; color: var(--text-muted); white-space: nowrap; }
+.spin { animation: spin 1s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
+
+<div id="loadingBar"></div>
 
 <div id="loginOverlay">
   <div class="login-box">
@@ -166,11 +175,15 @@ main, header, nav, footer { position: relative; z-index: 1; }
 
 <nav class="bg-white shadow-sm sticky-top">
   <div class="container">
-    <div class="d-flex gap-2 py-2 scrollable-tabs">
-      <button type="button" class="btn-tab active" data-tab="kelas" onclick="switchTab('kelas')"><i class="bi bi-building"></i><span>Kelola Kelas</span></button>
-      <button type="button" class="btn-tab" data-tab="murid" onclick="switchTab('murid')"><i class="bi bi-people"></i><span>Murid & Target</span></button>
-      <button type="button" class="btn-tab" data-tab="jurnal" onclick="switchTab('jurnal')"><i class="bi bi-journal-text"></i><span>Jurnal Setoran</span></button>
-      <button type="button" class="btn-tab" data-tab="rekap" onclick="switchTab('rekap')"><i class="bi bi-graph-up-arrow"></i><span>Rekap & Statistik</span></button>
+    <div class="d-flex gap-2 py-2 align-items-center">
+      <div class="d-flex gap-2 scrollable-tabs">
+        <button type="button" class="btn-tab active" data-tab="kelas" onclick="switchTab('kelas')"><i class="bi bi-building"></i><span>Kelola Kelas</span></button>
+        <button type="button" class="btn-tab" data-tab="murid" onclick="switchTab('murid')"><i class="bi bi-people"></i><span>Murid & Target</span></button>
+        <button type="button" class="btn-tab" data-tab="jurnal" onclick="switchTab('jurnal')"><i class="bi bi-journal-text"></i><span>Jurnal Setoran</span></button>
+        <button type="button" class="btn-tab" data-tab="rekap" onclick="switchTab('rekap')"><i class="bi bi-graph-up-arrow"></i><span>Rekap & Statistik</span></button>
+      </div>
+      <span id="syncInfo" class="d-none d-md-inline"></span>
+      <button class="btn btn-sm btn-outline-blue flex-shrink-0" id="btnRefresh" onclick="loadData({ force: true })" title="Muat ulang data dari server"><i class="bi bi-arrow-clockwise" id="iconRefresh"></i> <span class="d-none d-sm-inline">Muat Ulang</span></button>
     </div>
   </div>
 </nav>
@@ -255,7 +268,7 @@ main, header, nav, footer { position: relative; z-index: 1; }
       <div class="col-md-3 col-6"><div class="stat-card blue"><div class="d-flex justify-content-between align-items-start"><div><p class="stat-label">Total Murid</p><p class="stat-value" id="statTotalMurid">0</p></div><i class="bi bi-people stat-icon"></i></div></div></div>
       <div class="col-md-3 col-6"><div class="stat-card orange"><div class="d-flex justify-content-between align-items-start"><div><p class="stat-label">Total Setoran</p><p class="stat-value" id="statTotalSetoran">0</p></div><i class="bi bi-journal-check stat-icon"></i></div></div></div>
       <div class="col-md-3 col-6"><div class="stat-card green"><div class="d-flex justify-content-between align-items-start"><div><p class="stat-label">Total Halaman</p><p class="stat-value" id="statTotalHalaman">0</p></div><i class="bi bi-file-earmark-text stat-icon"></i></div></div></div>
-      <div class="col-md-3 col-6"><div class="stat-card purple"><div class="d-flex justify-content-between align-items-start"><div><p class="stat-label">Rata-rata/Bulan</p><p class="stat-value" id="statRataRata">0</p></div><i class="bi bi-graph-up stat-icon"></i></div></div></div>
+      <div class="col-md-3 col-6"><div class="stat-card purple"><div class="d-flex justify-content-between align-items-start"><div><p class="stat-label">Rata-rata Halaman/Bulan</p><p class="stat-value" id="statRataRata">0</p></div><i class="bi bi-graph-up stat-icon"></i></div></div></div>
     </div>
     <div class="card-custom mb-4">
       <div class="card-header-custom"><div><i class="bi bi-funnel"></i> Filter Rekap (Nested)</div></div>
@@ -304,7 +317,7 @@ main, header, nav, footer { position: relative; z-index: 1; }
       <div class="mb-3"><label class="form-label">Wali Kelas</label><input type="text" class="form-control" id="kelasWali" placeholder="Nama wali kelas"></div>
       <div class="mb-3"><label class="form-label">Tahun Ajaran</label><input type="text" class="form-control" id="kelasTahun" placeholder="Contoh: 2025/2026"></div>
     </div>
-    <div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button><button class="btn btn-primary-blue btn-sm" onclick="saveKelas()"><i class="bi bi-save"></i> Simpan</button></div>
+    <div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button><button class="btn btn-primary-blue btn-sm" id="btnSaveKelas" onclick="saveKelas()"><i class="bi bi-save"></i> Simpan</button></div>
   </div></div>
 </div>
 
@@ -323,7 +336,7 @@ main, header, nav, footer { position: relative; z-index: 1; }
         <div class="col-md-6"><label class="form-label">Target Akhir Hafalan <span class="text-danger">*</span></label><input type="text" class="form-control" id="muridAkhir" placeholder="Contoh: Al-Baqarah: 150" required></div>
       </div>
     </div>
-    <div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button><button class="btn btn-primary-blue btn-sm" onclick="saveMurid()"><i class="bi bi-save"></i> Simpan</button></div>
+    <div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button><button class="btn btn-primary-blue btn-sm" id="btnSaveMurid" onclick="saveMurid()"><i class="bi bi-save"></i> Simpan</button></div>
   </div></div>
 </div>
 
@@ -336,41 +349,97 @@ main, header, nav, footer { position: relative; z-index: 1; }
         <div class="col-md-12">
           <label class="form-label">Nama Murid <span class="text-danger">*</span></label>
           <div class="searchable-select">
-            <input type="text" class="form-control" id="jurnalMuridSearch" placeholder="Ketik nama murid..." oninput="filterMuridOptions()" onfocus="showMuridOptions()" onblur="setTimeout(()=>hideMuridOptions(),200)" autocomplete="off">
+            <input type="text" class="form-control" id="jurnalMuridSearch" placeholder="Ketik nama murid..." oninput="document.getElementById('jurnalMuridId').value=''; filterMuridOptions()" onfocus="filterMuridOptions()" onblur="setTimeout(hideMuridOptions,200)" autocomplete="off">
             <div class="dropdown-options" id="muridDropdownOptions"></div>
           </div>
         </div>
-        <div class="col-md-6"><label class="form-label">Bulan Pelaporan <span class="text-danger">*</span></label><select class="form-select" id="jurnalBulan" required><option value="">-- Pilih Bulan --</option><option value="Januari">Januari</option><option value="Februari">Februari</option><option value="Maret">Maret</option><option value="April">April</option><option value="Mei">Mei</option><option value="Juni">Juni</option><option value="Juli">Juli</option><option value="Agustus">Agustus</option><option value="September">September</option><option value="Oktober">Oktober</option><option value="November">November</option><option value="Desember">Desember</option></select></div>
+        <div class="col-md-6"><label class="form-label">Bulan Pelaporan <span class="text-danger">*</span></label><select class="form-select" id="jurnalBulan" required><option value="">-- Pilih Bulan --</option></select></div>
         <div class="col-md-6"><label class="form-label">Jumlah Halaman <span class="text-danger">*</span></label><input type="number" class="form-control" id="jurnalHalaman" placeholder="Jumlah halaman terhitung" min="0" step="0.5" required></div>
         <div class="col-md-12"><label class="form-label">Surat/Ayat Terakhir Disetor Bulan Ini <span class="text-danger">*</span></label><input type="text" class="form-control" id="jurnalSurat" placeholder="Contoh: Al-Baqarah: 100-120" required></div>
         <div class="col-md-12"><label class="form-label">Catatan (opsional)</label><textarea class="form-control" id="jurnalCatatan" rows="2" placeholder="Catatan tambahan..."></textarea></div>
       </div>
     </div>
-    <div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button><button class="btn btn-primary-blue btn-sm" onclick="saveJurnal()"><i class="bi bi-save"></i> Simpan</button></div>
+    <div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button><button class="btn btn-primary-blue btn-sm" id="btnSaveJurnal" onclick="saveJurnal()"><i class="bi bi-save"></i> Simpan</button></div>
   </div></div>
 </div>
 
 <script>
-const API_URL = 'https://script.google.com/macros/s/AKfycbxBj-k7ADbv92k0i_oVs2UepNxKpCr_xFr_FvVS6DvR1jEBLh79AhIyyxewyseSwuKW/exec'; // GANTI DENGAN URL GOOGLE APPS SCRIPT ANDA
+/* =====================================================================
+   KONFIGURASI
+   ===================================================================== */
+const API_URL = 'https://script.google.com/macros/s/AKfycbxBj-k7ADbv92k0i_oVs2UepNxKpCr_xFr_FvVS6DvR1jEBLh79AhIyyxewyseSwuKW/exec';
 const ADMIN_USER = 'admin';
 const ADMIN_PASS = 'admin123';
+const WRITE_KEY = 'admin';          // Opsional: samakan dengan WRITE_KEY di Code.gs
+const API_READY = !!API_URL && !/GANTI/i.test(API_URL);
+const FETCH_TIMEOUT_MS = 30000;
+const FETCH_RETRIES = 2;
+const AUTO_REFRESH_MS = 45000; // muat ulang otomatis bila tab dibuka kembali setelah jeda ini
+const BATCH_SIZE = 150;        // jumlah baris per request saat import
 
-let dataKelas = [], dataMurid = [], dataJurnal = [];
 const BULAN_LIST = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+
+/* =====================================================================
+   STATE
+   ===================================================================== */
+let dataKelas = [], dataMurid = [], dataJurnal = [];
 let chartRekapInstance = null;
 let isLoggedIn = false;
+let pendingWrites = 0;   // jumlah penulisan yang sedang berjalan
+let isFetching = false;
+let lastFetch = 0;
+let hasLoadedOnce = false;
+
+/* =====================================================================
+   UTILITAS
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const val = id => { const el = $(id); return el ? el.value : ''; };
 
 function showToast(msg, type='success') {
   const icons = { success:'bi-check-circle-fill text-success', error:'bi-x-circle-fill text-danger', warning:'bi-exclamation-triangle-fill text-warning', info:'bi-info-circle-fill text-primary' };
   const toast = document.createElement('div');
   toast.className = `toast-custom ${type}`;
-  toast.innerHTML = `<i class="bi ${icons[type]||icons.info}"></i><div>${msg}</div>`;
-  document.getElementById('toastContainer').appendChild(toast);
-  setTimeout(() => { toast.style.opacity='0'; toast.style.transform='translateX(120%)'; setTimeout(()=>toast.remove(),300); }, 3000);
+  toast.innerHTML = `<i class="bi ${icons[type]||icons.info}"></i><div>${escapeHtml(msg)}</div>`;
+  $('toastContainer').appendChild(toast);
+  setTimeout(() => { toast.style.opacity='0'; toast.style.transform='translateX(120%)'; setTimeout(()=>toast.remove(),300); }, type === 'error' ? 5000 : 3000);
 }
 
 function escapeHtml(str) { if (str === null || str === undefined) return ''; return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function escapeAttr(str) { return String(str||'').replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+
+// ID unik: waktu + angka acak (aman dari tabrakan saat import massal / banyak pengguna)
+let _uidLast = 0;
+function uid() {
+  // ms*1000 + acak(0-999), dijamin naik terus -> unik meski dipanggil ribuan kali dalam 1 ms; tetap < 2^53
+  let t = Date.now() * 1000 + Math.floor(Math.random() * 1000);
+  if (t <= _uidLast) t = _uidLast + 1;
+  _uidLast = t;
+  return String(t);
+}
+
+function toNum(v) {
+  if (typeof v === 'number') return isFinite(v) ? v : 0;
+  const n = Number(String(v === null || v === undefined ? '' : v).trim().replace(',', '.'));
+  return isFinite(n) ? n : 0;
+}
+const fmt = n => String(Math.round((Number(n) || 0) * 10) / 10);
+const sameText = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
+const normName = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+
+function normalizeBulan(raw) {
+  const t = String(raw || '').trim().toLowerCase();
+  return BULAN_LIST.find(b => b.toLowerCase() === t) || '';
+}
+
+function pick(obj, keys) {
+  for (const k of keys) { if (obj[k] !== undefined && obj[k] !== null && obj[k] !== '') return obj[k]; }
+  return '';
+}
+function lowerKeys(item) { const o = {}; for (const k in item) o[String(k).trim().toLowerCase()] = item[k]; return o; }
+
+function normalizeExcelRows(rawRows) { return rawRows.map(lowerKeys); }
+
 function generateExcel(data, sheetName, filename, cols=null) {
   const ws = XLSX.utils.json_to_sheet(data); if (cols) ws['!cols'] = cols;
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, sheetName);
@@ -381,765 +450,673 @@ function generateExcel(data, sheetName, filename, cols=null) {
   setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
 }
 
-function normalizeExcelRows(rawRows) {
-  return rawRows.map(row => {
-    const newRow = {};
-    for (let key in row) {
-      newRow[key.trim().toLowerCase()] = row[key];
-    }
-    return newRow;
-  });
+function setLoading(on) {
+  $('loadingBar').classList.toggle('active', on);
+  const icon = $('iconRefresh'); if (icon) icon.classList.toggle('spin', on);
+}
+function setBusy(btnId, busy) {
+  const b = $(btnId); if (!b) return;
+  b.disabled = busy;
+  if (busy) { b.dataset.html = b.innerHTML; b.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Menyimpan...'; }
+  else if (b.dataset.html) { b.innerHTML = b.dataset.html; }
+}
+function updateSyncInfo() {
+  const el = $('syncInfo'); if (!el || !lastFetch) return;
+  el.textContent = 'Sinkron: ' + new Date(lastFetch).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
 }
 
-function showLoginOverlay() { document.getElementById('loginOverlay').style.display = 'flex'; }
-function hideLoginOverlay() { document.getElementById('loginOverlay').style.display = 'none'; }
+/* =====================================================================
+   LAPISAN API  (inti perbaikan sinkronisasi)
+   - GET : cache-busting (?_=) + cache:'no-store' agar tidak pernah memakai cache browser/CDN
+   - POST: idempoten (server memakai upsert berdasarkan id) sehingga aman di-retry
+   ===================================================================== */
+async function fetchJson(url, options, retries = FETCH_RETRIES) {
+  let lastErr;
+  for (let i = 0; i <= retries; i++) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+    try {
+      const res = await fetch(url, { ...options, signal: ctrl.signal, cache: 'no-store', redirect: 'follow' });
+      clearTimeout(timer);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const text = await res.text();
+      try { return JSON.parse(text); }
+      catch (e) { throw new Error('Respons server bukan JSON. Pastikan Apps Script sudah di-deploy sebagai "New version" dan akses "Anyone".'); }
+    } catch (e) {
+      clearTimeout(timer);
+      lastErr = e.name === 'AbortError' ? new Error('Koneksi ke server terlalu lama (timeout)') : e;
+      if (i < retries) await sleep(700 * (i + 1));
+    }
+  }
+  throw lastErr;
+}
+
+async function apiWrite(action, table, data) {
+  if (!API_READY) { showToast('URL API belum diatur di kode.', 'error'); return null; }
+  pendingWrites++;
+  try {
+    const body = { action, table, data };
+    if (WRITE_KEY) body.key = WRITE_KEY;
+    const json = await fetchJson(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body)
+    });
+    if (json.status !== 'success') throw new Error(json.message || 'Server menolak permintaan');
+    return json;
+  } catch (e) {
+    showToast('Gagal menyimpan: ' + e.message, 'error');
+    return null;
+  } finally {
+    pendingWrites--;
+  }
+}
+
+async function apiWriteBatch(table, rows) {
+  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+    const res = await apiWrite('batchCreate', table, rows.slice(i, i + BATCH_SIZE));
+    if (!res) return false;
+  }
+  return true;
+}
+
+/* =====================================================================
+   MUAT DATA
+   ===================================================================== */
+async function loadData(opts = {}) {
+  const { silent = false, force = false } = opts;
+  if (!API_READY) { showToast('Harap set URL API terlebih dahulu di kode!', 'error'); return false; }
+  if (isFetching) return false;
+  if (pendingWrites > 0 && !force) return false; // jangan timpa data lokal saat ada penyimpanan berjalan
+  isFetching = true; setLoading(true);
+  if (!silent) showToast('Memuat data dari server...', 'info');
+  try {
+    const json = await fetchJson(API_URL + '?action=read&_=' + Date.now() + Math.random().toString(36).slice(2, 6), { method: 'GET' });
+    if (json.status !== 'success' || !json.data) throw new Error(json.message || 'Format data tidak valid');
+
+    const kelas = (json.data.kelas || []).map(lowerKeys).map(o => ({
+      id: String(pick(o, ['id'])).trim(),
+      nama: String(pick(o, ['nama', 'nama kelas'])).trim(),
+      wali: String(pick(o, ['wali', 'wali kelas'])),
+      tahun: String(pick(o, ['tahun', 'tahun ajaran']))
+    })).filter(k => k.id);
+
+    const murid = (json.data.murid || []).map(lowerKeys).map(o => ({
+      id: String(pick(o, ['id'])).trim(),
+      nama: String(pick(o, ['nama', 'nama lengkap'])).trim(),
+      kelasId: String(pick(o, ['kelasid', 'kelas'])).trim(),
+      program: String(pick(o, ['program'])) || 'Reguler',
+      target: toNum(pick(o, ['target', 'target hafalan semester (halaman)'])) || 10,
+      nis: String(pick(o, ['nis'])),
+      mulai: String(pick(o, ['mulai', 'mulai hafalan', 'ayat mulai hafalan'])),
+      akhir: String(pick(o, ['akhir', 'akhir hafalan', 'target akhir hafalan']))
+    })).filter(m => m.id);
+
+    const jurnal = (json.data.jurnal || []).map(lowerKeys).map(o => ({
+      id: String(pick(o, ['id'])).trim(),
+      muridId: String(pick(o, ['muridid', 'murid id', 'nama murid'])).trim(),
+      bulan: normalizeBulan(pick(o, ['bulan', 'bulan pelaporan'])) || String(pick(o, ['bulan', 'bulan pelaporan'])).trim(),
+      surat: String(pick(o, ['surat', 'surat/ayat terakhir'])),
+      halaman: toNum(pick(o, ['halaman', 'jumlah halaman'])),
+      catatan: String(pick(o, ['catatan']))
+    })).filter(j => j.id);
+
+    // Rekonsiliasi referensi: data lama yang menyimpan NAMA (bukan id) dipetakan ke id yang benar
+    murid.forEach(m => {
+      if (m.kelasId && !kelas.some(k => k.id === m.kelasId)) {
+        const k = kelas.find(k => sameText(k.nama, m.kelasId));
+        if (k) m.kelasId = k.id;
+      }
+    });
+    jurnal.forEach(j => {
+      if (!murid.some(m => m.id === j.muridId)) {
+        const hit = murid.find(m => normName(m.nama) === normName(j.muridId));
+        if (hit) j.muridId = hit.id;
+      }
+    });
+
+    dataKelas = kelas; dataMurid = murid; dataJurnal = jurnal;
+    lastFetch = Date.now(); hasLoadedOnce = true; updateSyncInfo();
+    renderAll();
+    if (!silent) showToast(`Data dimuat: ${kelas.length} kelas, ${murid.length} murid, ${jurnal.length} setoran`, 'success');
+    return true;
+  } catch (e) {
+    showToast('Gagal memuat data: ' + e.message, 'error');
+    return false;
+  } finally {
+    isFetching = false; setLoading(false);
+  }
+}
+
+function renderAll() {
+  renderKelas(); renderMurid(); renderJurnal();
+  if (!$('tab-rekap').classList.contains('d-none')) renderRekap();
+}
+
+/* =====================================================================
+   LOGIN
+   ===================================================================== */
+function showLoginOverlay() { $('loginOverlay').style.display = 'flex'; }
+function hideLoginOverlay() { $('loginOverlay').style.display = 'none'; }
+
+function applyLoginState(logged) {
+  isLoggedIn = logged;
+  $('btnLogin').classList.toggle('d-none', logged);
+  $('btnLoginMobile').classList.toggle('d-none', logged);
+  $('btnLogout').classList.toggle('d-none', !logged);
+  $('btnLogoutMobile').classList.toggle('d-none', !logged);
+  ['kelasActions', 'muridActions', 'jurnalActions'].forEach(id => $(id).classList.toggle('d-none', !logged));
+  renderAll();
+}
 
 function doLogin() {
-  const u = document.getElementById('loginUser').value;
-  const p = document.getElementById('loginPass').value;
-  if (u === ADMIN_USER && p === ADMIN_PASS) {
-    isLoggedIn = true;
+  if (val('loginUser') === ADMIN_USER && val('loginPass') === ADMIN_PASS) {
     sessionStorage.setItem('tahfiz_logged_in', 'true');
-    hideLoginOverlay();
-    document.getElementById('btnLogin').classList.add('d-none');
-    document.getElementById('btnLoginMobile').classList.add('d-none');
-    document.getElementById('btnLogout').classList.remove('d-none');
-    document.getElementById('btnLogoutMobile').classList.remove('d-none');
-    showAdminActions(true);
+    hideLoginOverlay(); applyLoginState(true);
     showToast('Login berhasil! Selamat datang Admin', 'success');
   } else {
     showToast('Username atau password salah', 'error');
   }
 }
-
 function doLogout() {
-  isLoggedIn = false;
   sessionStorage.removeItem('tahfiz_logged_in');
-  document.getElementById('btnLogin').classList.remove('d-none');
-  document.getElementById('btnLoginMobile').classList.remove('d-none');
-  document.getElementById('btnLogout').classList.add('d-none');
-  document.getElementById('btnLogoutMobile').classList.add('d-none');
-  showAdminActions(false);
+  applyLoginState(false);
   showToast('Anda telah keluar', 'warning');
 }
-
-function showAdminActions(show) {
-  ['kelasActions', 'muridActions', 'jurnalActions'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) {
-      if (show) { el.classList.remove('d-none'); }
-      else { el.classList.add('d-none'); }
-    }
-  });
-  if (dataKelas.length > 0) renderKelas();
-  if (dataMurid.length > 0) renderMurid();
-  if (dataJurnal.length > 0) renderJurnal();
+function requireAdmin() {
+  if (!isLoggedIn) { showToast('Akses ditolak! Silakan login sebagai Admin.', 'error'); return false; }
+  return true;
 }
 
-async function fetchData() {
-  if (API_URL !== 'https://script.google.com/macros/s/AKfycbxBj-k7ADbv92k0i_oVs2UepNxKpCr_xFr_FvVS6DvR1jEBLh79AhIyyxewyseSwuKW/exec') {
-    showToast('Harap set URL API terlebih dahulu di kode!', 'error');
-    return;
-  }
-  showToast('Memuat data dari server...', 'info');
-  try {
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'read' })
-    });
-    const json = await res.json();
-    if (json.status === 'success' && json.data) {
-      dataKelas = json.data.kelas || [];
-      dataMurid = json.data.murid || [];
-      dataJurnal = json.data.jurnal || [];
-      renderKelas(); renderMurid(); renderJurnal();
-      showToast('Data berhasil dimuat', 'success');
-    } else { 
-      showToast('Gagal memuat data: ' + (json.message || 'Format tidak valid'), 'error'); 
-    }
-  } catch (e) { 
-    showToast('Error koneksi: ' + e.message, 'error'); 
-  }
-}
-
-async function apiPost(action, table, data) {
-  try {
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action, table, data })
-    });
-    const json = await res.json();
-    return json.status === 'success';
-  } catch (e) {
-    showToast('Error API: ' + e.message, 'error');
-    return false;
-  }
-}
-
+/* =====================================================================
+   TAB
+   ===================================================================== */
 function switchTab(tabName) {
   document.querySelectorAll('.app-tab').forEach(el => el.classList.add('d-none'));
-  document.getElementById('tab-' + tabName).classList.remove('d-none');
+  $('tab-' + tabName).classList.remove('d-none');
   document.querySelectorAll('.btn-tab').forEach(el => el.classList.remove('active'));
   document.querySelector(`.btn-tab[data-tab="${tabName}"]`).classList.add('active');
   if (tabName === 'kelas') renderKelas();
   if (tabName === 'murid') renderMurid();
   if (tabName === 'jurnal') renderJurnal();
   if (tabName === 'rekap') renderRekap();
+  // Pastikan data tidak basi: muat ulang diam-diam bila sudah lama
+  if (Date.now() - lastFetch > AUTO_REFRESH_MS) loadData({ silent: true });
 }
 
+/* =====================================================================
+   KELAS
+   ===================================================================== */
 function renderKelas() {
-  const search = (document.getElementById('searchKelas')?.value || '').toLowerCase();
-  let filtered = dataKelas.filter(k => (k.nama||'').toLowerCase().includes(search) || (k.wali||'').toLowerCase().includes(search));
-  document.getElementById('totalKelas').textContent = filtered.length;
-  const tbody = document.getElementById('tableKelas');
-  if (filtered.length === 0) { tbody.innerHTML = `<div class="empty-state"><i class="bi bi-inbox"></i><h6>Belum ada data kelas</h6></div>`; return; }
-  tbody.innerHTML = `<table class="table table-custom"><thead><tr><th style="width:50px;">No</th><th>Nama Kelas</th><th>Wali Kelas</th><th>Tahun Ajaran</th><th>Jumlah Murid</th>${isLoggedIn?'<th style="width:120px;">Aksi</th>':''}</tr></thead><tbody>${filtered.map((k, i) => {
-    const jmlMurid = dataMurid.filter(m => String(m.kelasId) === String(k.id)).length;
-    return `<tr><td>${i+1}</td><td><strong>${escapeHtml(k.nama)}</strong></td><td>${escapeHtml(k.wali||'-')}</td><td>${escapeHtml(k.tahun||'-')}</td><td><span class="badge bg-info">${jmlMurid} murid</span></td>${isLoggedIn?`<td><button class="btn btn-outline-blue btn-action" onclick="openModalKelas('${k.id}')"><i class="bi bi-pencil"></i></button><button class="btn btn-outline-danger btn-action" onclick="deleteKelas('${k.id}')"><i class="bi bi-trash"></i></button></td>`:''}</tr>`;
+  const search = val('searchKelas').toLowerCase();
+  const filtered = dataKelas.filter(k => (k.nama||'').toLowerCase().includes(search) || (k.wali||'').toLowerCase().includes(search));
+  $('totalKelas').textContent = filtered.length;
+  const box = $('tableKelas');
+  if (filtered.length === 0) { box.innerHTML = `<div class="empty-state"><i class="bi bi-inbox"></i><h6>${hasLoadedOnce ? 'Belum ada data kelas' : 'Memuat data...'}</h6></div>`; return; }
+  box.innerHTML = `<table class="table table-custom"><thead><tr><th style="width:50px;">No</th><th>Nama Kelas</th><th>Wali Kelas</th><th>Tahun Ajaran</th><th>Jumlah Murid</th>${isLoggedIn?'<th style="width:120px;">Aksi</th>':''}</tr></thead><tbody>${filtered.map((k, i) => {
+    const jml = dataMurid.filter(m => m.kelasId === k.id).length;
+    return `<tr><td>${i+1}</td><td><strong>${escapeHtml(k.nama)}</strong></td><td>${escapeHtml(k.wali||'-')}</td><td>${escapeHtml(k.tahun||'-')}</td><td><span class="badge bg-info">${jml} murid</span></td>${isLoggedIn?`<td><button class="btn btn-outline-blue btn-action" onclick="openModalKelas('${escapeHtml(k.id)}')"><i class="bi bi-pencil"></i></button><button class="btn btn-outline-danger btn-action" onclick="deleteKelas('${escapeHtml(k.id)}')"><i class="bi bi-trash"></i></button></td>`:''}</tr>`;
   }).join('')}</tbody></table>`;
 }
 
 function openModalKelas(id=null) {
-  if(!isLoggedIn) return showToast('Akses ditolak! Silakan login sebagai Admin.', 'error');
-  document.getElementById('modalKelasTitle').textContent = id ? 'Edit Kelas' : 'Tambah Kelas';
-  document.getElementById('kelasId').value = id || '';
-  if (id) {
-    const k = dataKelas.find(x => String(x.id) === String(id));
-    document.getElementById('kelasNama').value = k.nama||''; 
-    document.getElementById('kelasWali').value = k.wali||''; 
-    document.getElementById('kelasTahun').value = k.tahun||'';
-  } else { 
-    document.getElementById('kelasNama').value=''; 
-    document.getElementById('kelasWali').value=''; 
-    document.getElementById('kelasTahun').value=''; 
-  }
-  bootstrap.Modal.getOrCreateInstance(document.getElementById('modalKelas')).show();
+  if (!requireAdmin()) return;
+  $('modalKelasTitle').textContent = id ? 'Edit Kelas' : 'Tambah Kelas';
+  $('kelasId').value = id || '';
+  const k = id ? dataKelas.find(x => x.id === String(id)) : null;
+  $('kelasNama').value = k ? k.nama : '';
+  $('kelasWali').value = k ? k.wali : '';
+  $('kelasTahun').value = k ? k.tahun : '';
+  bootstrap.Modal.getOrCreateInstance($('modalKelas')).show();
 }
 
 async function saveKelas() {
-  const nama = document.getElementById('kelasNama').value.trim();
+  if (!requireAdmin()) return;
+  const nama = val('kelasNama').trim();
   if (!nama) return showToast('Nama kelas wajib diisi', 'error');
-  const id = document.getElementById('kelasId').value;
-  const payload = { id: id ? id : Date.now().toString(), nama, wali: document.getElementById('kelasWali').value.trim(), tahun: document.getElementById('kelasTahun').value.trim() };
-  bootstrap.Modal.getOrCreateInstance(document.getElementById('modalKelas')).hide();
-  showToast('Menyimpan ke server...', 'info');
-  if (await apiPost(id ? 'update' : 'create', 'kelas', payload)) {
-    if (id) { const k = dataKelas.find(x => String(x.id) === String(id)); Object.assign(k, payload); }
-    else { dataKelas.push(payload); }
-    renderKelas(); showToast('Data kelas tersimpan', 'success');
-  }
+  const id = val('kelasId');
+  if (dataKelas.some(k => sameText(k.nama, nama) && k.id !== id)) return showToast('Nama kelas sudah ada', 'warning');
+  const payload = { id: id || uid(), nama, wali: val('kelasWali').trim(), tahun: val('kelasTahun').trim() };
+  setBusy('btnSaveKelas', true);
+  const ok = await apiWrite(id ? 'update' : 'create', 'kelas', payload);
+  setBusy('btnSaveKelas', false);
+  if (!ok) return; // modal tetap terbuka agar input tidak hilang
+  const idx = dataKelas.findIndex(x => x.id === payload.id);
+  if (idx >= 0) dataKelas[idx] = payload; else dataKelas.push(payload);
+  bootstrap.Modal.getOrCreateInstance($('modalKelas')).hide();
+  renderAll(); showToast('Data kelas tersimpan', 'success');
 }
 
 async function deleteKelas(id) {
-  if(!isLoggedIn) return showToast('Akses ditolak! Silakan login sebagai Admin.', 'error');
+  if (!requireAdmin()) return;
+  const jml = dataMurid.filter(m => m.kelasId === String(id)).length;
+  if (jml > 0) return showToast(`Kelas masih memiliki ${jml} murid. Pindahkan/hapus murid terlebih dahulu.`, 'warning');
   if (!confirm('Hapus kelas ini?')) return;
   showToast('Menghapus...', 'info');
-  if (await apiPost('delete', 'kelas', { id: String(id) })) { 
-    dataKelas = dataKelas.filter(k => String(k.id) !== String(id)); 
-    renderKelas(); 
-    showToast('Kelas dihapus', 'warning'); 
+  if (await apiWrite('delete', 'kelas', { id: String(id) })) {
+    dataKelas = dataKelas.filter(k => k.id !== String(id));
+    renderAll(); showToast('Kelas dihapus', 'warning');
   }
 }
 
-function downloadTemplateKelas() { 
-  generateExcel([{ 'Nama Kelas':'X IPA 1', 'Wali Kelas':'Budi Santoso', 'Tahun Ajaran':'2025/2026' }], 'Kelas', 'Template_Kelas.xlsx'); 
-  showToast('Template Excel kelas diunduh'); 
+function downloadTemplateKelas() {
+  generateExcel([{ 'Nama Kelas':'X IPA 1', 'Wali Kelas':'Budi Santoso', 'Tahun Ajaran':'2025/2026' }], 'Kelas', 'Template_Kelas.xlsx');
+  showToast('Template Excel kelas diunduh');
+}
+
+function readExcelFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        resolve(normalizeExcelRows(XLSX.utils.sheet_to_json(ws, { defval: '' })));
+      } catch (err) { reject(err); }
+    };
+    reader.onerror = () => reject(new Error('File tidak bisa dibaca'));
+    reader.readAsArrayBuffer(file);
+  });
 }
 
 async function importKelas(event) {
-  if(!isLoggedIn) return showToast('Akses ditolak! Silakan login sebagai Admin.', 'error');
-  const file = event.target.files[0]; 
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    try {
-      const wb = XLSX.read(e.target.result, { type:'array' }); 
-      const ws = wb.Sheets[wb.SheetNames[0]]; 
-      const rawRows = XLSX.utils.sheet_to_json(ws, { defval: '' });
-      const rows = normalizeExcelRows(rawRows);
-      
-      let count = 0, failed = 0; 
-      showToast('Mengimpor data...', 'info');
-      for (const r of rows) {
-        const namaKelas = String(r['nama kelas'] || '').trim();
-        if (!namaKelas) { failed++; continue; }
-        
-        const payload = { 
-          id: (Date.now() + count).toString(), 
-          nama: namaKelas, 
-          wali: String(r['wali kelas'] || '').trim(), 
-          tahun: String(r['tahun ajaran'] || '').trim() 
-        };
-        await apiPost('create', 'kelas', payload); 
-        dataKelas.push(payload); 
-        count++;
-      }
-      renderKelas(); 
-      showToast(`Import selesai: ${count} kelas berhasil${failed ? `, ${failed} baris gagal` : ''}`);
-    } catch(err) { showToast('Gagal import: '+err.message, 'error'); }
-  }; 
-  reader.readAsArrayBuffer(file); 
-  event.target.value = '';
+  const file = event.target.files[0]; event.target.value = '';
+  if (!requireAdmin() || !file) return;
+  try {
+    const rows = await readExcelFile(file);
+    const payloads = []; let failed = 0, dup = 0;
+    const seen = new Set(dataKelas.map(k => normName(k.nama)));
+    rows.forEach(r => {
+      const nama = String(r['nama kelas'] || '').trim();
+      if (!nama) { failed++; return; }
+      if (seen.has(normName(nama))) { dup++; return; }
+      seen.add(normName(nama));
+      payloads.push({ id: uid(), nama, wali: String(r['wali kelas'] || '').trim(), tahun: String(r['tahun ajaran'] || '').trim() });
+    });
+    if (!payloads.length) return showToast(`Tidak ada kelas baru untuk diimpor${dup ? ` (${dup} sudah ada)` : ''}${failed ? `, ${failed} baris tidak valid` : ''}`, 'warning');
+    showToast(`Mengimpor ${payloads.length} kelas...`, 'info');
+    if (await apiWriteBatch('kelas', payloads)) {
+      dataKelas.push(...payloads); renderAll();
+      showToast(`Import selesai: ${payloads.length} kelas berhasil${dup ? `, ${dup} dilewati (sudah ada)` : ''}${failed ? `, ${failed} baris gagal` : ''}`);
+    }
+  } catch (err) { showToast('Gagal import: ' + err.message, 'error'); }
 }
 
-function populateKelasOptions(selectId, selectedId=null) { 
-  const sel = document.getElementById(selectId); 
-  const currentVal = selectedId !== null ? String(selectedId) : String(sel.value); 
-  sel.innerHTML = '<option value="">-- Pilih Kelas --</option>' + dataKelas.map(k => `<option value="${k.id}" ${currentVal===String(k.id)?'selected':''}>${escapeHtml(k.nama)}</option>`).join(''); 
+/* =====================================================================
+   MURID
+   ===================================================================== */
+function populateKelasOptions(selectId, selectedId=null) {
+  const sel = $(selectId);
+  const cur = selectedId !== null ? String(selectedId) : String(sel.value);
+  sel.innerHTML = '<option value="">-- Pilih Kelas --</option>' + dataKelas.map(k => `<option value="${escapeHtml(k.id)}" ${cur===k.id?'selected':''}>${escapeHtml(k.nama)}</option>`).join('');
 }
 
-function updateTargetHafalan() { 
-  const program = document.getElementById('muridProgram').value; 
-  document.getElementById('muridTarget').value = program === 'Pondok' ? 20 : (program === 'Reguler' ? 10 : ''); 
+function updateTargetHafalan() {
+  const program = val('muridProgram');
+  $('muridTarget').value = program === 'Pondok' ? 20 : (program === 'Reguler' ? 10 : '');
 }
 
 function renderMurid() {
-  const filterKelas = document.getElementById('filterMuridKelas'); 
-  const currFilter = String(filterKelas.value);
-  filterKelas.innerHTML = '<option value="">Semua Kelas</option>' + dataKelas.map(k => `<option value="${k.id}" ${currFilter===String(k.id)?'selected':''}>${escapeHtml(k.nama)}</option>`).join('');
-  const search = (document.getElementById('searchMurid')?.value || '').toLowerCase(); 
-  const kelasFilter = filterKelas.value; 
-  const programFilter = document.getElementById('filterMuridProgram').value;
-  let filtered = dataMurid.filter(m => (!kelasFilter || String(m.kelasId) === String(kelasFilter)) && (!programFilter || m.program === programFilter) && ((m.nama||'').toLowerCase().includes(search)));
-  document.getElementById('totalMurid').textContent = filtered.length; 
-  const tbody = document.getElementById('tableMurid');
-  if (filtered.length === 0) { tbody.innerHTML = `<div class="empty-state"><i class="bi bi-people"></i><h6>Belum ada data murid</h6></div>`; return; }
-  tbody.innerHTML = `<table class="table table-custom"><thead><tr><th style="width:40px;">No</th><th>Nama Lengkap</th><th>Kelas</th><th>Program</th><th>Target</th><th>Mulai</th><th>Akhir</th>${isLoggedIn?'<th style="width:120px;">Aksi</th>':''}</tr></thead><tbody>${filtered.map((m, i) => {
-    const kelas = dataKelas.find(k => String(k.id) === String(m.kelasId));
-    return `<tr><td>${i+1}</td><td><strong>${escapeHtml(m.nama)}</strong><br><small class="text-muted">${escapeHtml(m.nis||'')}</small></td><td>${kelas ? escapeHtml(kelas.nama) : '-'}</td><td><span class="badge-program-${(m.program||'').toLowerCase()}">${m.program||'-'}</span></td><td><strong>${m.target||0}</strong> hal</td><td>${escapeHtml(m.mulai||'-')}</td><td>${escapeHtml(m.akhir||'-')}</td>${isLoggedIn?`<td><button class="btn btn-outline-blue btn-action" onclick="openModalMurid('${m.id}')"><i class="bi bi-pencil"></i></button><button class="btn btn-outline-danger btn-action" onclick="deleteMurid('${m.id}')"><i class="bi bi-trash"></i></button></td>`:''}</tr>`;
+  const fk = $('filterMuridKelas'); const cur = fk.value;
+  fk.innerHTML = '<option value="">Semua Kelas</option>' + dataKelas.map(k => `<option value="${escapeHtml(k.id)}" ${cur===k.id?'selected':''}>${escapeHtml(k.nama)}</option>`).join('');
+  const search = val('searchMurid').toLowerCase();
+  const kelasFilter = fk.value; const programFilter = val('filterMuridProgram');
+  const filtered = dataMurid.filter(m => (!kelasFilter || m.kelasId === kelasFilter) && (!programFilter || m.program === programFilter) && (m.nama||'').toLowerCase().includes(search));
+  $('totalMurid').textContent = filtered.length;
+  const box = $('tableMurid');
+  if (filtered.length === 0) { box.innerHTML = `<div class="empty-state"><i class="bi bi-people"></i><h6>${hasLoadedOnce ? 'Belum ada data murid' : 'Memuat data...'}</h6></div>`; return; }
+  box.innerHTML = `<table class="table table-custom"><thead><tr><th style="width:40px;">No</th><th>Nama Lengkap</th><th>Kelas</th><th>Program</th><th>Target</th><th>Mulai</th><th>Akhir</th>${isLoggedIn?'<th style="width:120px;">Aksi</th>':''}</tr></thead><tbody>${filtered.map((m, i) => {
+    const kelas = dataKelas.find(k => k.id === m.kelasId);
+    return `<tr><td>${i+1}</td><td><strong>${escapeHtml(m.nama)}</strong><br><small class="text-muted">${escapeHtml(m.nis||'')}</small></td><td>${kelas ? escapeHtml(kelas.nama) : '-'}</td><td><span class="badge-program-${(m.program||'').toLowerCase()}">${escapeHtml(m.program||'-')}</span></td><td><strong>${m.target||0}</strong> hal</td><td>${escapeHtml(m.mulai||'-')}</td><td>${escapeHtml(m.akhir||'-')}</td>${isLoggedIn?`<td><button class="btn btn-outline-blue btn-action" onclick="openModalMurid('${escapeHtml(m.id)}')"><i class="bi bi-pencil"></i></button><button class="btn btn-outline-danger btn-action" onclick="deleteMurid('${escapeHtml(m.id)}')"><i class="bi bi-trash"></i></button></td>`:''}</tr>`;
   }).join('')}</tbody></table>`;
 }
 
 function openModalMurid(id=null) {
-  if(!isLoggedIn) return showToast('Akses ditolak! Silakan login sebagai Admin.', 'error');
-  document.getElementById('modalMuridTitle').textContent = id ? 'Edit Murid' : 'Tambah Murid'; 
-  document.getElementById('muridId').value = id || ''; 
-  populateKelasOptions('muridKelas');
-  if (id) { 
-    const m = dataMurid.find(x => String(x.id) === String(id)); 
-    document.getElementById('muridNama').value = m.nama||''; 
-    document.getElementById('muridKelas').value = m.kelasId||''; 
-    document.getElementById('muridProgram').value = m.program||''; 
-    document.getElementById('muridNis').value = m.nis||''; 
-    document.getElementById('muridMulai').value = m.mulai||''; 
-    document.getElementById('muridAkhir').value = m.akhir||''; 
-    updateTargetHafalan(); 
-    document.getElementById('muridTarget').value = m.target||''; 
-  } else { 
-    ['muridNama','muridNis','muridMulai','muridAkhir'].forEach(id => document.getElementById(id).value=''); 
-    document.getElementById('muridProgram').value = ''; 
-    document.getElementById('muridKelas').value = ''; 
-    updateTargetHafalan(); 
-  }
-  bootstrap.Modal.getOrCreateInstance(document.getElementById('modalMurid')).show();
+  if (!requireAdmin()) return;
+  $('modalMuridTitle').textContent = id ? 'Edit Murid' : 'Tambah Murid';
+  $('muridId').value = id || '';
+  const m = id ? dataMurid.find(x => x.id === String(id)) : null;
+  populateKelasOptions('muridKelas', m ? m.kelasId : '');
+  $('muridNama').value = m ? m.nama : '';
+  $('muridProgram').value = m ? m.program : '';
+  $('muridNis').value = m ? m.nis : '';
+  $('muridMulai').value = m ? m.mulai : '';
+  $('muridAkhir').value = m ? m.akhir : '';
+  updateTargetHafalan();
+  if (m) $('muridTarget').value = m.target || '';
+  bootstrap.Modal.getOrCreateInstance($('modalMurid')).show();
 }
 
 async function saveMurid() {
-  const nama = document.getElementById('muridNama').value.trim(); 
-  const kelasId = document.getElementById('muridKelas').value; 
-  const program = document.getElementById('muridProgram').value; 
-  const mulai = document.getElementById('muridMulai').value.trim(); 
-  const akhir = document.getElementById('muridAkhir').value.trim();
-  if (!nama) return showToast('Nama wajib diisi', 'error'); 
-  if (!kelasId) return showToast('Kelas wajib dipilih', 'error'); 
-  if (!program) return showToast('Program wajib dipilih', 'error'); 
-  if (!mulai) return showToast('Ayat mulai wajib diisi', 'error'); 
+  if (!requireAdmin()) return;
+  const nama = val('muridNama').trim(), kelasId = val('muridKelas'), program = val('muridProgram');
+  const mulai = val('muridMulai').trim(), akhir = val('muridAkhir').trim();
+  if (!nama) return showToast('Nama wajib diisi', 'error');
+  if (!kelasId) return showToast('Kelas wajib dipilih', 'error');
+  if (!program) return showToast('Program wajib dipilih', 'error');
+  if (!mulai) return showToast('Ayat mulai wajib diisi', 'error');
   if (!akhir) return showToast('Target akhir wajib diisi', 'error');
-  const target = program === 'Pondok' ? 20 : 10; 
-  const nis = document.getElementById('muridNis').value.trim(); 
-  const id = document.getElementById('muridId').value;
-  const payload = { id: id ? id : Date.now().toString(), nama, kelasId: String(kelasId), program, target, nis, mulai, akhir };
-  bootstrap.Modal.getOrCreateInstance(document.getElementById('modalMurid')).hide(); 
-  showToast('Menyimpan...', 'info');
-  if (await apiPost(id ? 'update' : 'create', 'murid', payload)) {
-    if (id) { const m = dataMurid.find(x => String(x.id) === String(id)); Object.assign(m, payload); } 
-    else { dataMurid.push(payload); }
-    renderMurid(); showToast('Data murid tersimpan', 'success');
-  }
+  const id = val('muridId');
+  if (dataMurid.some(m => normName(m.nama) === normName(nama) && m.kelasId === kelasId && m.id !== id)) return showToast('Murid dengan nama yang sama sudah ada di kelas ini', 'warning');
+  const payload = { id: id || uid(), nama, kelasId: String(kelasId), program, target: program === 'Pondok' ? 20 : 10, nis: val('muridNis').trim(), mulai, akhir };
+  setBusy('btnSaveMurid', true);
+  const ok = await apiWrite(id ? 'update' : 'create', 'murid', payload);
+  setBusy('btnSaveMurid', false);
+  if (!ok) return;
+  const idx = dataMurid.findIndex(x => x.id === payload.id);
+  if (idx >= 0) dataMurid[idx] = payload; else dataMurid.push(payload);
+  bootstrap.Modal.getOrCreateInstance($('modalMurid')).hide();
+  renderAll(); showToast('Data murid tersimpan', 'success');
 }
 
 async function deleteMurid(id) {
-  if(!isLoggedIn) return showToast('Akses ditolak! Silakan login sebagai Admin.', 'error');
-  if (!confirm('Hapus murid ini?')) return; 
+  if (!requireAdmin()) return;
+  const jml = dataJurnal.filter(j => j.muridId === String(id)).length;
+  if (!confirm(`Hapus murid ini${jml ? ` beserta ${jml} data setorannya` : ''}?`)) return;
   showToast('Menghapus...', 'info');
-  if (await apiPost('delete', 'murid', { id: String(id) })) { 
-    dataMurid = dataMurid.filter(m => String(m.id) !== String(id)); 
-    dataJurnal = dataJurnal.filter(j => String(j.muridId) !== String(id)); 
-    renderMurid(); 
-    showToast('Murid dihapus', 'warning'); 
+  if (await apiWrite('delete', 'murid', { id: String(id) })) { // server ikut menghapus jurnal murid tsb
+    dataMurid = dataMurid.filter(m => m.id !== String(id));
+    dataJurnal = dataJurnal.filter(j => j.muridId !== String(id));
+    renderAll(); showToast('Murid dihapus', 'warning');
   }
 }
 
-function downloadTemplateMurid() { 
-  generateExcel([{ 'Nama Lengkap':'Ahmad Fauzan', 'Kelas':'X IPA 1', 'Program':'Pondok', 'NIS':'2025001', 'Mulai Hafalan':'Al-Fatihah: 1', 'Akhir Hafalan':'Al-Baqarah: 150' }], 'Murid', 'Template_Murid.xlsx', [{wch:25},{wch:15},{wch:12},{wch:12},{wch:20},{wch:20}]); 
-  showToast('Template Excel murid diunduh'); 
+function downloadTemplateMurid() {
+  generateExcel([{ 'Nama Lengkap':'Ahmad Fauzan', 'Kelas':'X IPA 1', 'Program':'Pondok', 'NIS':'2025001', 'Mulai Hafalan':'Al-Fatihah: 1', 'Akhir Hafalan':'Al-Baqarah: 150' }], 'Murid', 'Template_Murid.xlsx', [{wch:25},{wch:15},{wch:12},{wch:12},{wch:20},{wch:20}]);
+  showToast('Template Excel murid diunduh');
 }
 
 async function importMurid(event) {
-  if(!isLoggedIn) return showToast('Akses ditolak! Silakan login sebagai Admin.', 'error');
-  const file = event.target.files[0]; 
-  if (!file) return; 
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    try { 
-      const wb = XLSX.read(e.target.result, { type:'array' }); 
-      const ws = wb.Sheets[wb.SheetNames[0]]; 
-      const rawRows = XLSX.utils.sheet_to_json(ws, { defval: '' });
-      const rows = normalizeExcelRows(rawRows);
-      
-      let count = 0, failed = 0; 
-      showToast('Mengimpor data...', 'info');
-      for (const r of rows) {
-        const namaLengkap = String(r['nama lengkap'] || '').trim();
-        if (!namaLengkap) { failed++; continue; }
-        
-        const kelasNama = String(r['kelas']||'').trim(); 
-        let kelas = dataKelas.find(k => k.nama.toLowerCase() === kelasNama.toLowerCase());
-        if (!kelas && kelasNama) { 
-          kelas = { id: (Date.now() + count + 100).toString(), nama: kelasNama, wali:'', tahun:'' }; 
-          await apiPost('create', 'kelas', kelas); 
-          dataKelas.push(kelas); 
-        }
-        const programRaw = String(r['program'] || 'Reguler').trim().toLowerCase();
-        const program = programRaw === 'pondok' ? 'Pondok' : 'Reguler'; 
-        const target = program === 'Pondok' ? 20 : 10;
-        
-        const payload = { 
-          id: (Date.now() + count + 200).toString(), 
-          nama: namaLengkap, 
-          kelasId: kelas?String(kelas.id):'', 
-          program, 
-          target, 
-          nis: r['nis'] ? String(r['nis']) : '', 
-          mulai: String(r['mulai hafalan'] || '').trim(), 
-          akhir: String(r['akhir hafalan'] || '').trim() 
-        };
-        await apiPost('create', 'murid', payload); 
-        dataMurid.push(payload); 
-        count++;
+  const file = event.target.files[0]; event.target.value = '';
+  if (!requireAdmin() || !file) return;
+  try {
+    const rows = await readExcelFile(file);
+    const newKelas = []; const payloads = []; let failed = 0, dup = 0;
+    const kelasByName = new Map(dataKelas.map(k => [normName(k.nama), k]));
+    const seen = new Set(dataMurid.map(m => normName(m.nama) + '|' + m.kelasId));
+    rows.forEach(r => {
+      const nama = String(r['nama lengkap'] || '').trim();
+      if (!nama) { failed++; return; }
+      const kelasNama = String(r['kelas'] || '').trim();
+      let kelas = kelasNama ? kelasByName.get(normName(kelasNama)) : null;
+      if (!kelas && kelasNama) {
+        kelas = { id: uid(), nama: kelasNama, wali: '', tahun: '' };
+        kelasByName.set(normName(kelasNama), kelas); newKelas.push(kelas);
       }
-      renderMurid(); 
-      showToast(`Import selesai: ${count} murid berhasil${failed ? `, ${failed} baris gagal` : ''}`);
-    } catch(err) { showToast('Gagal import: '+err.message, 'error'); }
-  }; 
-  reader.readAsArrayBuffer(file); 
-  event.target.value = '';
+      const program = String(r['program'] || 'Reguler').trim().toLowerCase() === 'pondok' ? 'Pondok' : 'Reguler';
+      const kelasId = kelas ? kelas.id : '';
+      const key = normName(nama) + '|' + kelasId;
+      if (seen.has(key)) { dup++; return; }
+      seen.add(key);
+      payloads.push({ id: uid(), nama, kelasId, program, target: program === 'Pondok' ? 20 : 10, nis: r['nis'] !== '' ? String(r['nis']).trim() : '', mulai: String(r['mulai hafalan'] || '').trim(), akhir: String(r['akhir hafalan'] || '').trim() });
+    });
+    if (!payloads.length) return showToast(`Tidak ada murid baru untuk diimpor${dup ? ` (${dup} sudah ada)` : ''}${failed ? `, ${failed} baris tidak valid` : ''}`, 'warning');
+    showToast(`Mengimpor ${payloads.length} murid...`, 'info');
+    if (newKelas.length) {
+      if (!await apiWriteBatch('kelas', newKelas)) return;
+      dataKelas.push(...newKelas);
+    }
+    if (await apiWriteBatch('murid', payloads)) {
+      dataMurid.push(...payloads); renderAll();
+      showToast(`Import selesai: ${payloads.length} murid berhasil${newKelas.length ? `, ${newKelas.length} kelas baru dibuat` : ''}${dup ? `, ${dup} dilewati (sudah ada)` : ''}${failed ? `, ${failed} baris gagal` : ''}`);
+    }
+  } catch (err) { showToast('Gagal import: ' + err.message, 'error'); }
 }
 
-function updateFilterJurnalMurid() { 
-  const kelasFilter = document.getElementById('filterJurnalKelas').value; 
-  const muridFilter = document.getElementById('filterJurnalMurid'); 
-  const curr = String(muridFilter.value); 
-  let murids = dataMurid; 
-  if (kelasFilter) murids = murids.filter(m => String(m.kelasId) === String(kelasFilter)); 
-  muridFilter.innerHTML = '<option value="">Semua Murid</option>' + murids.map(m => `<option value="${m.id}" ${curr===String(m.id)?'selected':''}>${escapeHtml(m.nama)}</option>`).join(''); 
+/* =====================================================================
+   JURNAL
+   ===================================================================== */
+function updateFilterJurnalMurid() {
+  const kelasFilter = val('filterJurnalKelas');
+  const sel = $('filterJurnalMurid'); const cur = sel.value;
+  const list = kelasFilter ? dataMurid.filter(m => m.kelasId === kelasFilter) : dataMurid;
+  sel.innerHTML = '<option value="">Semua Murid</option>' + list.map(m => `<option value="${escapeHtml(m.id)}" ${cur===m.id?'selected':''}>${escapeHtml(m.nama)}</option>`).join('');
 }
 
 function renderJurnal() {
-  const filterKelas = document.getElementById('filterJurnalKelas'); 
-  const currKelas = String(filterKelas.value);
-  filterKelas.innerHTML = '<option value="">Semua Kelas</option>' + dataKelas.map(k => `<option value="${k.id}" ${currKelas===String(k.id)?'selected':''}>${escapeHtml(k.nama)}</option>`).join('');
+  const fk = $('filterJurnalKelas'); const curK = fk.value;
+  fk.innerHTML = '<option value="">Semua Kelas</option>' + dataKelas.map(k => `<option value="${escapeHtml(k.id)}" ${curK===k.id?'selected':''}>${escapeHtml(k.nama)}</option>`).join('');
   updateFilterJurnalMurid();
-  const filterBulan = document.getElementById('filterJurnalBulan'); 
-  const currBulan = filterBulan.value;
-  filterBulan.innerHTML = '<option value="">Semua Bulan</option>' + BULAN_LIST.map(b => `<option value="${b}" ${currBulan===b?'selected':''}>${b}</option>`).join('');
-  
-  const kelasFilter = filterKelas.value; 
-  const muridFilter = document.getElementById('filterJurnalMurid').value; 
-  const bulanFilter = filterBulan.value;
-  const searchJurnal = (document.getElementById('searchJurnal')?.value || '').toLowerCase();
-  
-  let filtered = dataJurnal.filter(j => { 
-    const murid = dataMurid.find(m => String(m.id) === String(j.muridId)); 
-    if (!murid) return false; 
-    if (kelasFilter && String(murid.kelasId) !== String(kelasFilter)) return false; 
-    if (muridFilter && String(j.muridId) !== String(muridFilter)) return false; 
-    if (bulanFilter && String(j.bulan||'').trim().toLowerCase() !== String(bulanFilter).toLowerCase()) return false;
-    if (searchJurnal && !murid.nama.toLowerCase().includes(searchJurnal)) return false; 
-    return true; 
-  });
-  
-  filtered.sort((a,b) => (b.id||0) - (a.id||0));
-  document.getElementById('totalJurnal').textContent = filtered.length; 
-  const tbody = document.getElementById('tableJurnal');
-  if (filtered.length === 0) { tbody.innerHTML = `<div class="empty-state"><i class="bi bi-journal-text"></i><h6>Belum ada data setoran</h6></div>`; return; }
-  tbody.innerHTML = `<table class="table table-custom"><thead><tr><th style="width:40px;">No</th><th>Nama Murid</th><th>Kelas</th><th>Bulan</th><th>Surat/Ayat Terakhir</th><th>Halaman</th><th>Catatan</th>${isLoggedIn?'<th style="width:120px;">Aksi</th>':''}</tr></thead><tbody>${filtered.map((j, i) => {
-    const murid = dataMurid.find(m => String(m.id) === String(j.muridId)); 
-    const kelas = murid ? dataKelas.find(k => String(k.id) === String(murid.kelasId)) : null;
-    return `<tr><td>${i+1}</td><td><strong>${murid ? escapeHtml(murid.nama) : '-'}</strong></td><td>${kelas ? escapeHtml(kelas.nama) : '-'}</td><td><span class="badge bg-secondary">${j.bulan||'-'}</span></td><td>${escapeHtml(j.surat||'-')}</td><td><strong class="text-primary">${j.halaman||0}</strong> hal</td><td><small class="text-muted">${escapeHtml(j.catatan||'-')}</small></td>${isLoggedIn?`<td><button class="btn btn-outline-blue btn-action" onclick="openModalJurnal('${j.id}')"><i class="bi bi-pencil"></i></button><button class="btn btn-outline-danger btn-action" onclick="deleteJurnal('${j.id}')"><i class="bi bi-trash"></i></button></td>`:''}</tr>`;
+  const fb = $('filterJurnalBulan'); const curB = fb.value;
+  fb.innerHTML = '<option value="">Semua Bulan</option>' + BULAN_LIST.map(b => `<option value="${b}" ${curB===b?'selected':''}>${b}</option>`).join('');
+
+  const kelasFilter = fk.value, muridFilter = val('filterJurnalMurid'), bulanFilter = fb.value;
+  const search = val('searchJurnal').toLowerCase();
+  const muridMap = new Map(dataMurid.map(m => [m.id, m]));
+  const filtered = dataJurnal.filter(j => {
+    const m = muridMap.get(j.muridId);
+    if (!m) return false;
+    if (kelasFilter && m.kelasId !== kelasFilter) return false;
+    if (muridFilter && m.id !== muridFilter) return false;
+    if (bulanFilter && !sameText(j.bulan, bulanFilter)) return false;
+    if (search && !m.nama.toLowerCase().includes(search)) return false;
+    return true;
+  }).sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
+
+  $('totalJurnal').textContent = filtered.length;
+  const box = $('tableJurnal');
+  if (filtered.length === 0) { box.innerHTML = `<div class="empty-state"><i class="bi bi-journal-text"></i><h6>${hasLoadedOnce ? 'Belum ada data setoran' : 'Memuat data...'}</h6></div>`; return; }
+  box.innerHTML = `<table class="table table-custom"><thead><tr><th style="width:40px;">No</th><th>Nama Murid</th><th>Kelas</th><th>Bulan</th><th>Surat/Ayat Terakhir</th><th>Halaman</th><th>Catatan</th>${isLoggedIn?'<th style="width:120px;">Aksi</th>':''}</tr></thead><tbody>${filtered.map((j, i) => {
+    const m = muridMap.get(j.muridId);
+    const kelas = m ? dataKelas.find(k => k.id === m.kelasId) : null;
+    return `<tr><td>${i+1}</td><td><strong>${m ? escapeHtml(m.nama) : '-'}</strong></td><td>${kelas ? escapeHtml(kelas.nama) : '-'}</td><td><span class="badge bg-secondary">${escapeHtml(j.bulan||'-')}</span></td><td>${escapeHtml(j.surat||'-')}</td><td><strong class="text-primary">${fmt(j.halaman)}</strong> hal</td><td><small class="text-muted">${escapeHtml(j.catatan||'-')}</small></td>${isLoggedIn?`<td><button class="btn btn-outline-blue btn-action" onclick="openModalJurnal('${escapeHtml(j.id)}')"><i class="bi bi-pencil"></i></button><button class="btn btn-outline-danger btn-action" onclick="deleteJurnal('${escapeHtml(j.id)}')"><i class="bi bi-trash"></i></button></td>`:''}</tr>`;
   }).join('')}</tbody></table>`;
 }
 
-function showMuridOptions() { 
-  const dropdown = document.getElementById('muridDropdownOptions'); 
-  const murids = dataMurid.map(m => { const kelas = dataKelas.find(k => String(k.id) === String(m.kelasId)); return { ...m, kelasNama: kelas ? kelas.nama : '-' }; }); 
-  if (murids.length === 0) { dropdown.innerHTML = '<div class="dropdown-option text-muted">Belum ada data murid</div>'; } 
-  else { dropdown.innerHTML = murids.map(m => `<div class="dropdown-option" onclick="selectMuridJurnal('${m.id}', '${escapeAttr(m.nama)}')"><strong>${escapeHtml(m.nama)}</strong><br><small class="text-muted">${escapeHtml(m.kelasNama)} • ${m.program}</small></div>`).join(''); } 
-  dropdown.classList.add('show'); 
+function muridOptionsHtml(list) {
+  if (!list.length) return '<div class="dropdown-option text-muted">Murid tidak ditemukan</div>';
+  return list.map(m => {
+    const kelas = dataKelas.find(k => k.id === m.kelasId);
+    return `<div class="dropdown-option" data-id="${escapeHtml(m.id)}" onmousedown="selectMuridJurnal(this.dataset.id)"><strong>${escapeHtml(m.nama)}</strong><br><small class="text-muted">${escapeHtml(kelas ? kelas.nama : '-')} • ${escapeHtml(m.program)}</small></div>`;
+  }).join('');
 }
-
-function filterMuridOptions() { 
-  const search = document.getElementById('jurnalMuridSearch').value.toLowerCase(); 
-  const dropdown = document.getElementById('muridDropdownOptions'); 
-  const murids = dataMurid.filter(m => (m.nama||'').toLowerCase().includes(search)).map(m => { const kelas = dataKelas.find(k => String(k.id) === String(m.kelasId)); return { ...m, kelasNama: kelas ? kelas.nama : '-' }; }); 
-  if (murids.length === 0) { dropdown.innerHTML = '<div class="dropdown-option text-muted">Murid tidak ditemukan</div>'; } 
-  else { dropdown.innerHTML = murids.map(m => `<div class="dropdown-option" onclick="selectMuridJurnal('${m.id}', '${escapeAttr(m.nama)}')"><strong>${escapeHtml(m.nama)}</strong><br><small class="text-muted">${escapeHtml(m.kelasNama)} • ${m.program}</small></div>`).join(''); } 
-  dropdown.classList.add('show'); 
+function filterMuridOptions() {
+  const s = val('jurnalMuridSearch').toLowerCase();
+  const dd = $('muridDropdownOptions');
+  dd.innerHTML = muridOptionsHtml(dataMurid.filter(m => (m.nama||'').toLowerCase().includes(s)));
+  dd.classList.add('show');
 }
-
-function hideMuridOptions() { document.getElementById('muridDropdownOptions').classList.remove('show'); }
-function selectMuridJurnal(id, nama) { document.getElementById('jurnalMuridId').value = id; document.getElementById('jurnalMuridSearch').value = nama; hideMuridOptions(); }
+function hideMuridOptions() { $('muridDropdownOptions').classList.remove('show'); }
+function selectMuridJurnal(id) {
+  const m = dataMurid.find(x => x.id === String(id)); if (!m) return;
+  $('jurnalMuridId').value = m.id; $('jurnalMuridSearch').value = m.nama; hideMuridOptions();
+}
 
 function openModalJurnal(id=null) {
-  if(!isLoggedIn) return showToast('Akses ditolak! Silakan login sebagai Admin.', 'error');
-  document.getElementById('modalJurnalTitle').textContent = id ? 'Edit Setoran' : 'Tambah Setoran'; 
-  document.getElementById('jurnalId').value = id || ''; 
-  document.getElementById('jurnalMuridId').value = ''; 
-  document.getElementById('jurnalMuridSearch').value = ''; 
-  document.getElementById('jurnalBulan').value = ''; 
-  document.getElementById('jurnalHalaman').value = ''; 
-  document.getElementById('jurnalSurat').value = ''; 
-  document.getElementById('jurnalCatatan').value = '';
-  if (id) { 
-    const j = dataJurnal.find(x => String(x.id) === String(id)); 
-    if (j) { 
-      const murid = dataMurid.find(m => String(m.id) === String(j.muridId)); 
-      document.getElementById('jurnalMuridId').value = j.muridId; 
-      document.getElementById('jurnalMuridSearch').value = murid ? murid.nama : ''; 
-      document.getElementById('jurnalBulan').value = j.bulan||''; 
-      document.getElementById('jurnalHalaman').value = j.halaman||''; 
-      document.getElementById('jurnalSurat').value = j.surat||''; 
-      document.getElementById('jurnalCatatan').value = j.catatan||''; 
-    } 
-  }
-  bootstrap.Modal.getOrCreateInstance(document.getElementById('modalJurnal')).show();
+  if (!requireAdmin()) return;
+  $('modalJurnalTitle').textContent = id ? 'Edit Setoran' : 'Tambah Setoran';
+  $('jurnalId').value = id || '';
+  const j = id ? dataJurnal.find(x => x.id === String(id)) : null;
+  const m = j ? dataMurid.find(x => x.id === j.muridId) : null;
+  $('jurnalMuridId').value = m ? m.id : '';
+  $('jurnalMuridSearch').value = m ? m.nama : '';
+  $('jurnalBulan').value = j ? j.bulan : '';
+  $('jurnalHalaman').value = j ? j.halaman : '';
+  $('jurnalSurat').value = j ? j.surat : '';
+  $('jurnalCatatan').value = j ? j.catatan : '';
+  bootstrap.Modal.getOrCreateInstance($('modalJurnal')).show();
 }
 
 async function saveJurnal() {
-  const muridId = document.getElementById('jurnalMuridId').value; 
-  const bulan = document.getElementById('jurnalBulan').value; 
-  const halaman = document.getElementById('jurnalHalaman').value; 
-  const surat = document.getElementById('jurnalSurat').value.trim(); 
-  const catatan = document.getElementById('jurnalCatatan').value.trim();
-  if (!muridId) return showToast('Murid wajib dipilih', 'error'); 
-  if (!bulan) return showToast('Bulan wajib dipilih', 'error'); 
-  if (!surat) return showToast('Surat/ayat wajib diisi', 'error'); 
-  if (halaman === '') return showToast('Jumlah halaman wajib diisi', 'error');
-  const id = document.getElementById('jurnalId').value; 
-  const payload = { id: id ? id : Date.now().toString(), muridId: String(muridId), bulan, surat, halaman: Number(halaman), catatan };
-  bootstrap.Modal.getOrCreateInstance(document.getElementById('modalJurnal')).hide(); 
-  showToast('Menyimpan...', 'info');
-  if (await apiPost(id ? 'update' : 'create', 'jurnal', payload)) {
-    if (id) { const j = dataJurnal.find(x => String(x.id) === String(id)); Object.assign(j, payload); } 
-    else { dataJurnal.push(payload); }
-    renderJurnal(); showToast('Setoran tersimpan', 'success');
+  if (!requireAdmin()) return;
+  const muridId = val('jurnalMuridId'), bulan = val('jurnalBulan'), halamanRaw = val('jurnalHalaman');
+  const surat = val('jurnalSurat').trim(), catatan = val('jurnalCatatan').trim();
+  if (!muridId) return showToast('Pilih murid dari daftar yang muncul saat mengetik', 'error');
+  if (!bulan) return showToast('Bulan wajib dipilih', 'error');
+  if (!surat) return showToast('Surat/ayat wajib diisi', 'error');
+  if (halamanRaw === '' || toNum(halamanRaw) < 0) return showToast('Jumlah halaman wajib diisi (minimal 0)', 'error');
+  const id = val('jurnalId');
+  if (!id && dataJurnal.some(j => j.muridId === muridId && sameText(j.bulan, bulan))) {
+    if (!confirm(`Murid ini sudah memiliki setoran bulan ${bulan}. Tetap tambahkan setoran baru?`)) return;
   }
+  const payload = { id: id || uid(), muridId: String(muridId), bulan, surat, halaman: toNum(halamanRaw), catatan };
+  setBusy('btnSaveJurnal', true);
+  const ok = await apiWrite(id ? 'update' : 'create', 'jurnal', payload);
+  setBusy('btnSaveJurnal', false);
+  if (!ok) return;
+  const idx = dataJurnal.findIndex(x => x.id === payload.id);
+  if (idx >= 0) dataJurnal[idx] = payload; else dataJurnal.push(payload);
+  bootstrap.Modal.getOrCreateInstance($('modalJurnal')).hide();
+  renderAll(); showToast('Setoran tersimpan', 'success');
 }
 
 async function deleteJurnal(id) {
-  if(!isLoggedIn) return showToast('Akses ditolak! Silakan login sebagai Admin.', 'error');
-  if (!confirm('Hapus setoran ini?')) return; 
+  if (!requireAdmin()) return;
+  if (!confirm('Hapus setoran ini?')) return;
   showToast('Menghapus...', 'info');
-  if (await apiPost('delete', 'jurnal', { id: String(id) })) { 
-    dataJurnal = dataJurnal.filter(j => String(j.id) !== String(id)); 
-    renderJurnal(); 
-    showToast('Setoran dihapus', 'warning'); 
+  if (await apiWrite('delete', 'jurnal', { id: String(id) })) {
+    dataJurnal = dataJurnal.filter(j => j.id !== String(id));
+    renderAll(); showToast('Setoran dihapus', 'warning');
   }
 }
 
-function downloadTemplateJurnal() { 
-  generateExcel([{ 'Nama Murid':'Ahmad Fauzan', 'Bulan Pelaporan':'Januari', 'Surat/Ayat Terakhir':'Al-Baqarah: 100-120', 'Jumlah Halaman':5, 'Catatan':'Hafalan lancar' }], 'Jurnal', 'Template_Jurnal.xlsx', [{wch:25},{wch:18},{wch:30},{wch:15},{wch:25}]); 
-  showToast('Template Excel jurnal diunduh'); 
+function downloadTemplateJurnal() {
+  generateExcel([{ 'Nama Murid':'Ahmad Fauzan', 'Bulan Pelaporan':'Januari', 'Surat/Ayat Terakhir':'Al-Baqarah: 100-120', 'Jumlah Halaman':5, 'Catatan':'Hafalan lancar' }], 'Jurnal', 'Template_Jurnal.xlsx', [{wch:25},{wch:18},{wch:30},{wch:15},{wch:25}]);
+  showToast('Template Excel jurnal diunduh');
 }
 
 async function importJurnal(event) {
-  if(!isLoggedIn) return showToast('Akses ditolak! Silakan login sebagai Admin.', 'error');
-  const file = event.target.files[0]; 
-  if (!file) return; 
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    try { 
-      const wb = XLSX.read(e.target.result, { type:'array' }); 
-      const ws = wb.Sheets[wb.SheetNames[0]]; 
-      const rawRows = XLSX.utils.sheet_to_json(ws, { defval: '' });
-      const rows = normalizeExcelRows(rawRows);
-      
-      let count = 0, failed = 0; 
-      showToast('Mengimpor data...', 'info');
-      for (const r of rows) {
-        const namaMuridExcel = String(r['nama murid'] || '').trim();
-        if (!namaMuridExcel) { failed++; continue; } 
-        
-        const murid = dataMurid.find(m => m.nama.toLowerCase().replace(/\s+/g, ' ') === namaMuridExcel.toLowerCase().replace(/\s+/g, ' '));
-        if (!murid) { failed++; continue; }
-        
-        const payload = { 
-          id: (Date.now() + count + 300).toString(), 
-          muridId: String(murid.id), 
-          bulan: String(r['bulan pelaporan'] || '').trim(), 
-          surat: String(r['surat/ayat terakhir'] || '').trim(), 
-          halaman: Number(r['jumlah halaman'] || 0), 
-          catatan: String(r['catatan'] || '').trim() 
-        };
-        await apiPost('create', 'jurnal', payload); 
-        dataJurnal.push(payload); 
-        count++;
-      }
-      renderJurnal(); 
-      showToast(`Import selesai: ${count} setoran berhasil${failed ? `, ${failed} baris gagal` : ''}`);
-    } catch(err) { showToast('Gagal import: '+err.message, 'error'); }
-  }; 
-  reader.readAsArrayBuffer(file); 
-  event.target.value = '';
+  const file = event.target.files[0]; event.target.value = '';
+  if (!requireAdmin() || !file) return;
+  try {
+    const rows = await readExcelFile(file);
+    const payloads = []; const problems = [];
+    const byName = new Map();
+    dataMurid.forEach(m => { const k = normName(m.nama); if (!byName.has(k)) byName.set(k, m); });
+    rows.forEach((r, i) => {
+      const nama = String(r['nama murid'] || '').trim();
+      if (!nama) { problems.push(`baris ${i+2}: nama kosong`); return; }
+      const murid = byName.get(normName(nama));
+      if (!murid) { problems.push(`baris ${i+2}: murid "${nama}" tidak ditemukan`); return; }
+      const bulan = normalizeBulan(r['bulan pelaporan']);
+      if (!bulan) { problems.push(`baris ${i+2}: bulan tidak valid`); return; }
+      payloads.push({ id: uid(), muridId: murid.id, bulan, surat: String(r['surat/ayat terakhir'] || '').trim(), halaman: toNum(r['jumlah halaman']), catatan: String(r['catatan'] || '').trim() });
+    });
+    if (!payloads.length) return showToast('Tidak ada baris valid. ' + problems.slice(0, 3).join('; '), 'error');
+    showToast(`Mengimpor ${payloads.length} setoran...`, 'info');
+    if (await apiWriteBatch('jurnal', payloads)) {
+      dataJurnal.push(...payloads); renderAll();
+      showToast(`Import selesai: ${payloads.length} setoran berhasil${problems.length ? `, ${problems.length} baris gagal (${problems.slice(0, 2).join('; ')}${problems.length > 2 ? '; ...' : ''})` : ''}`, problems.length ? 'warning' : 'success');
+    }
+  } catch (err) { showToast('Gagal import: ' + err.message, 'error'); }
 }
 
-function togglePeriodeRekap() { 
-  const periode = document.getElementById('rekapPeriode').value; 
-  document.getElementById('rekapBulanWrap').style.display = periode === 'bulanan' ? 'block' : 'none'; 
-  if (periode === 'bulanan') { const sel = document.getElementById('rekapFilterBulan'); sel.innerHTML = '<option value="">Semua Bulan</option>' + BULAN_LIST.map(b => `<option value="${b}">${b}</option>`).join(''); } 
+/* =====================================================================
+   REKAP
+   ===================================================================== */
+function initStaticOptions() {
+  $('jurnalBulan').innerHTML = '<option value="">-- Pilih Bulan --</option>' + BULAN_LIST.map(b => `<option value="${b}">${b}</option>`).join('');
+  $('rekapFilterBulan').innerHTML = '<option value="">Semua Bulan</option>' + BULAN_LIST.map(b => `<option value="${b}">${b}</option>`).join('');
 }
 
-function updateRekapFilterMurid() { 
-  const kelasFilter = document.getElementById('rekapFilterKelas').value; 
-  const muridFilter = document.getElementById('rekapFilterMurid'); 
-  const curr = String(muridFilter.value); 
-  let murids = dataMurid; 
-  if (kelasFilter) murids = murids.filter(m => String(m.kelasId) === String(kelasFilter)); 
-  muridFilter.innerHTML = '<option value="">Semua Murid</option>' + murids.map(m => `<option value="${m.id}" ${curr===String(m.id)?'selected':''}>${escapeHtml(m.nama)}</option>`).join(''); 
+function togglePeriodeRekap() {
+  $('rekapBulanWrap').style.display = val('rekapPeriode') === 'bulanan' ? 'block' : 'none';
 }
 
-function getFilteredJurnal() { 
-  const kelasFilter = document.getElementById('rekapFilterKelas').value; 
-  const muridFilter = document.getElementById('rekapFilterMurid').value; 
-  const periode = document.getElementById('rekapPeriode').value; 
-  const bulanFilter = document.getElementById('rekapFilterBulan')?.value || ''; 
-  return dataJurnal.filter(j => { 
-    const murid = dataMurid.find(m => String(m.id) === String(j.muridId)); 
-    if (!murid) return false; 
-    if (kelasFilter && String(murid.kelasId) !== String(kelasFilter)) return false; 
-    if (muridFilter && String(j.muridId) !== String(muridFilter)) return false; 
-    if (periode === 'bulanan' && bulanFilter && String(j.bulan||'').trim().toLowerCase() !== String(bulanFilter).toLowerCase()) return false; 
-    return true; 
-  }); 
+function updateRekapFilterMurid() {
+  const kelasFilter = val('rekapFilterKelas');
+  const sel = $('rekapFilterMurid'); const cur = sel.value;
+  const list = kelasFilter ? dataMurid.filter(m => m.kelasId === kelasFilter) : dataMurid;
+  sel.innerHTML = '<option value="">Semua Murid</option>' + list.map(m => `<option value="${escapeHtml(m.id)}" ${cur===m.id?'selected':''}>${escapeHtml(m.nama)}</option>`).join('');
+}
+
+function getRekapData() {
+  const kelasId = val('rekapFilterKelas'), muridId = val('rekapFilterMurid'), periode = val('rekapPeriode');
+  const bulan = periode === 'bulanan' ? val('rekapFilterBulan') : '';
+  const murids = dataMurid.filter(m => (!kelasId || m.kelasId === kelasId) && (!muridId || m.id === muridId));
+  const ids = new Set(murids.map(m => m.id));
+  const jurnals = dataJurnal.filter(j => ids.has(j.muridId) && (!bulan || sameText(j.bulan, bulan)));
+  const rows = murids.map(m => {
+    const js = jurnals.filter(j => j.muridId === m.id);
+    const totalHal = js.reduce((s, j) => s + toNum(j.halaman), 0);
+    const target = Number(m.target) || 0;
+    const persen = target > 0 ? Math.min(100, totalHal / target * 100) : 0;
+    const kelas = dataKelas.find(k => k.id === m.kelasId);
+    return { murid: m, kelasNama: kelas ? kelas.nama : '-', jurnals: js, totalHal, target, persen };
+  });
+  return { murids, jurnals, rows, bulan, muridId };
 }
 
 function renderRekap() {
-  const filterKelas = document.getElementById('rekapFilterKelas'); 
-  const currKelas = String(filterKelas.value);
-  filterKelas.innerHTML = '<option value="">Semua Kelas</option>' + dataKelas.map(k => `<option value="${k.id}" ${currKelas===String(k.id)?'selected':''}>${escapeHtml(k.nama)}</option>`).join('');
+  const fk = $('rekapFilterKelas'); const cur = fk.value;
+  fk.innerHTML = '<option value="">Semua Kelas</option>' + dataKelas.map(k => `<option value="${escapeHtml(k.id)}" ${cur===k.id?'selected':''}>${escapeHtml(k.nama)}</option>`).join('');
   updateRekapFilterMurid();
-  const filtered = getFilteredJurnal(); 
-  const totalHalaman = filtered.reduce((s, j) => s + (Number(j.halaman)||0), 0); 
-  const totalMuridFilter = new Set(filtered.map(j => j.muridId)).size; 
-  const rataRata = filtered.length > 0 ? (totalHalaman / filtered.length).toFixed(1) : 0;
-  document.getElementById('statTotalMurid').textContent = totalMuridFilter || dataMurid.length; 
-  document.getElementById('statTotalSetoran').textContent = filtered.length; 
-  document.getElementById('statTotalHalaman').textContent = totalHalaman; 
-  document.getElementById('statRataRata').textContent = rataRata;
-  const muridFiltered = dataMurid.filter(m => { 
-    if (document.getElementById('rekapFilterKelas').value && String(m.kelasId) !== String(document.getElementById('rekapFilterKelas').value)) return false; 
-    if (document.getElementById('rekapFilterMurid').value && String(m.id) !== String(document.getElementById('rekapFilterMurid').value)) return false; 
-    return true; 
-  });
-  const tbody = document.getElementById('tableRekap');
-  if (muridFiltered.length === 0) { tbody.innerHTML = `<div class="empty-state"><i class="bi bi-graph-up"></i><h6>Belum ada data</h6></div>`; renderChart([]); return; }
-  const rekapData = muridFiltered.map(m => { 
-    const jurnals = filtered.filter(j => String(j.muridId) === String(m.id)); 
-    const totalHal = jurnals.reduce((s,j) => s + (Number(j.halaman)||0), 0); 
-    const target = Number(m.target) || 0; 
-    const persen = target > 0 ? Math.min(100, (totalHal/target*100)) : 0; 
-    const kelas = dataKelas.find(k => String(k.id) === String(m.kelasId)); 
-    return { murid: m, kelasNama: kelas?kelas.nama:'-', jurnals, totalHal, target, persen }; 
-  });
-  tbody.innerHTML = `<table class="table table-custom"><thead><tr><th style="width:40px;">No</th><th>Nama Murid</th><th>Kelas</th><th>Program</th><th>Target</th><th>Total Setoran</th><th>Total Halaman</th><th style="width:200px;">Pencapaian</th></tr></thead><tbody>${rekapData.map((r, i) => { 
-    const status = r.persen >= 100 ? 'text-success' : (r.persen >= 50 ? 'text-warning' : 'text-danger'); 
-    return `<tr><td>${i+1}</td><td><strong>${escapeHtml(r.murid.nama)}</strong></td><td>${escapeHtml(r.kelasNama)}</td><td><span class="badge-program-${(r.murid.program||'').toLowerCase()}">${r.murid.program||'-'}</span></td><td>${r.target} hal</td><td>${r.jurnals.length}x</td><td><strong class="${status}">${r.totalHal} hal</strong></td><td><div class="d-flex align-items-center gap-2"><div class="progress flex-grow-1 progress-custom" style="height:8px;"><div class="progress-bar" style="width:${r.persen}%"></div></div><small class="${status} fw-bold">${r.persen.toFixed(0)}%</small></div></td></tr>`; 
-  }).join('')}</tbody><tfoot><tr style="background:var(--primary-blue-soft); font-weight:600;"><td colspan="4">TOTAL</td><td>${rekapData.reduce((s,r)=>s+r.target,0)} hal</td><td>${filtered.length}x</td><td>${totalHalaman} hal</td><td>-</td></tr></tfoot></table>`;
-  renderChart(rekapData);
+
+  const { jurnals, rows, bulan } = getRekapData();
+  const totalHalaman = jurnals.reduce((s, j) => s + toNum(j.halaman), 0);
+  const bulanUnik = new Set(jurnals.map(j => String(j.bulan).trim().toLowerCase())).size;
+  $('statTotalMurid').textContent = rows.length;
+  $('statTotalSetoran').textContent = jurnals.length;
+  $('statTotalHalaman').textContent = fmt(totalHalaman);
+  $('statRataRata').textContent = bulanUnik ? fmt(totalHalaman / bulanUnik) : 0;
+
+  const box = $('tableRekap');
+  if (rows.length === 0) { box.innerHTML = `<div class="empty-state"><i class="bi bi-graph-up"></i><h6>Belum ada data</h6></div>`; renderChart([], bulan); return; }
+  box.innerHTML = `<table class="table table-custom"><thead><tr><th style="width:40px;">No</th><th>Nama Murid</th><th>Kelas</th><th>Program</th><th>Target</th><th>Total Setoran</th><th>Total Halaman</th><th style="width:200px;">Pencapaian</th></tr></thead><tbody>${rows.map((r, i) => {
+    const status = r.persen >= 100 ? 'text-success' : (r.persen >= 50 ? 'text-warning' : 'text-danger');
+    return `<tr><td>${i+1}</td><td><strong>${escapeHtml(r.murid.nama)}</strong></td><td>${escapeHtml(r.kelasNama)}</td><td><span class="badge-program-${(r.murid.program||'').toLowerCase()}">${escapeHtml(r.murid.program||'-')}</span></td><td>${r.target} hal</td><td>${r.jurnals.length}x</td><td><strong class="${status}">${fmt(r.totalHal)} hal</strong></td><td><div class="d-flex align-items-center gap-2"><div class="progress flex-grow-1 progress-custom" style="height:8px;"><div class="progress-bar" style="width:${r.persen}%"></div></div><small class="${status} fw-bold">${r.persen.toFixed(0)}%</small></div></td></tr>`;
+  }).join('')}</tbody><tfoot><tr style="background:var(--primary-blue-soft); font-weight:600;"><td colspan="4">TOTAL</td><td>${rows.reduce((s,r)=>s+r.target,0)} hal</td><td>${jurnals.length}x</td><td>${fmt(totalHalaman)} hal</td><td>-</td></tr></tfoot></table>`;
+  renderChart(rows, bulan);
 }
 
-function renderChart(rekapData) { 
-  const ctx = document.getElementById('chartRekap'); 
-  if (chartRekapInstance) chartRekapInstance.destroy(); 
-  if (rekapData.length === 0) { 
-    ctx.getContext('2d').clearRect(0,0,ctx.width,ctx.height); 
-    return; 
-  } 
-  
-  const muridFilter = document.getElementById('rekapFilterMurid').value; 
-  const periode = document.getElementById('rekapPeriode').value; 
-  const bulanFilter = document.getElementById('rekapFilterBulan')?.value || ''; 
-  
-  let labels = [];
-  let datasets = [];
-  let titleText = "Grafik Hafalan";
-  
-  if (muridFilter) { 
-    const muridNama = rekapData[0].murid.nama;
-    const dataTarget = Number(rekapData[0].target) || 0;
-    
-    if (periode === 'bulanan' && bulanFilter) {
-      titleText = `Evaluasi Hafalan ${muridNama} Bulan ${bulanFilter}`;
-      labels = [muridNama];
-      const dataHalaman = rekapData[0].jurnals
-        .filter(j => String(j.bulan||'').trim().toLowerCase() === bulanFilter.toLowerCase())
-        .reduce((s,j) => s + (Number(j.halaman)||0), 0); 
-        
-      datasets = [
-        { 
-          label: `Capaian Bulan ${bulanFilter}`, 
-          data: [dataHalaman], 
-          backgroundColor: 'rgba(13, 79, 139, 0.8)', 
-          borderColor: '#0d4f8b', 
-          borderWidth: 2, 
-          borderRadius: 6 
-        }, 
-        { 
-          label: 'Target Semester', 
-          data: [dataTarget], 
-          backgroundColor: 'rgba(249, 115, 22, 0.6)', 
-          borderColor: '#ea580c', 
-          borderWidth: 2, 
-          borderRadius: 6 
-        }
-      ];
-    } else {
-      titleText = `Evaluasi Hafalan ${muridNama}`;
-      labels = [muridNama];
-      const dataHalaman = Number(rekapData[0].totalHal) || 0;
-      
-      datasets = [
-        { 
-          label: 'Halaman Tercapai', 
-          data: [dataHalaman], 
-          backgroundColor: 'rgba(13, 79, 139, 0.8)', 
-          borderColor: '#0d4f8b', 
-          borderWidth: 2, 
-          borderRadius: 6 
-        }, 
-        { 
-          label: 'Target Semester', 
-          data: [dataTarget], 
-          backgroundColor: 'rgba(249, 115, 22, 0.6)', 
-          borderColor: '#ea580c', 
-          borderWidth: 2, 
-          borderRadius: 6 
-        }
-      ];
+function renderChart(rows, bulan) {
+  const canvas = $('chartRekap');
+  if (chartRekapInstance) { chartRekapInstance.destroy(); chartRekapInstance = null; }
+  if (!rows.length || typeof Chart === 'undefined') return;
+  const single = rows.length === 1;
+  const title = single
+    ? `Evaluasi Hafalan ${rows[0].murid.nama}${bulan ? ' Bulan ' + bulan : ''}`
+    : (bulan ? `Pencapaian vs Target Semester - Bulan ${bulan}` : 'Perbandingan Pencapaian vs Target per Murid');
+  chartRekapInstance = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: rows.map(r => r.murid.nama),
+      datasets: [
+        { label: bulan ? `Capaian Bulan ${bulan}` : 'Halaman Tercapai', data: rows.map(r => Math.round(r.totalHal * 10) / 10), backgroundColor: 'rgba(13, 79, 139, 0.8)', borderColor: '#0d4f8b', borderWidth: 2, borderRadius: 6 },
+        { label: 'Target Semester', data: rows.map(r => r.target), backgroundColor: 'rgba(249, 115, 22, 0.6)', borderColor: '#ea580c', borderWidth: 2, borderRadius: 6 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { title: { display: true, text: title, font: { size: 14 } }, legend: { position: 'top' } },
+      scales: {
+        x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } },
+        y: { beginAtZero: true, title: { display: true, text: 'Jumlah Halaman' } }
+      }
     }
-  } else { 
-    if (periode === 'bulanan' && bulanFilter) {
-      titleText = `Pencapaian vs Target Bulan ${bulanFilter} per Murid`;
-      labels = rekapData.map(r => r.murid.nama); 
-      const dataHalaman = rekapData.map(r => r.jurnals
-        .filter(j => String(j.bulan||'').trim().toLowerCase() === bulanFilter.toLowerCase())
-        .reduce((s,j) => s + (Number(j.halaman)||0), 0)
-      ); 
-      const dataTarget = rekapData.map(r => Number(r.target) || 0); 
-      
-      datasets = [
-        { 
-          label: `Capaian Bulan ${bulanFilter}`, 
-          data: dataHalaman, 
-          backgroundColor: 'rgba(13, 79, 139, 0.8)', 
-          borderColor: '#0d4f8b', 
-          borderWidth: 2, 
-          borderRadius: 6 
-        }, 
-        { 
-          label: 'Target Semester', 
-          data: dataTarget, 
-          backgroundColor: 'rgba(249, 115, 22, 0.6)', 
-          borderColor: '#ea580c', 
-          borderWidth: 2, 
-          borderRadius: 6 
-        }
-      ];
-    } else {
-      titleText = "Perbandingan Pencapaian vs Target per Murid";
-      labels = rekapData.map(r => r.murid.nama); 
-      const dataHalaman = rekapData.map(r => Number(r.totalHal) || 0); 
-      const dataTarget = rekapData.map(r => Number(r.target) || 0); 
-      datasets = [
-        { 
-          label: 'Halaman Tercapai', 
-          data: dataHalaman, 
-          backgroundColor: 'rgba(13, 79, 139, 0.8)', 
-          borderColor: '#0d4f8b', 
-          borderWidth: 2, 
-          borderRadius: 6 
-        }, 
-        { 
-          label: 'Target Semester', 
-          data: dataTarget, 
-          backgroundColor: 'rgba(249, 115, 22, 0.6)', 
-          borderColor: '#ea580c', 
-          borderWidth: 2, 
-          borderRadius: 6 
-        }
-      ];
-    }
-  }
-  
-  chartRekapInstance = new Chart(ctx, { 
-    type: 'bar', 
-    data: { labels, datasets }, 
-    options: { 
-      responsive: true, 
-      maintainAspectRatio: false,
-      plugins: { 
-        title: { display: true, text: titleText, font:{ size:14 } }, 
-        legend: { position: 'top' } 
-      }, 
-      scales: { 
-        x: {
-          ticks: {
-            autoSkip: false,
-            maxRotation: 45,
-            minRotation: 45
-          }
-        },
-        y: { 
-          beginAtZero: true, 
-          title: { display: true, text: 'Jumlah Halaman' },
-          ticks: {
-            callback: function(value) { if (Number.isInteger(value)) return value; }
-          }
-        } 
-      } 
-    } 
-  }); 
+  });
 }
 
-function exportRekapExcel() { 
-  const filtered = getFilteredJurnal(); 
-  const muridFiltered = dataMurid.filter(m => { if (document.getElementById('rekapFilterKelas').value && String(m.kelasId) !== String(document.getElementById('rekapFilterKelas').value)) return false; if (document.getElementById('rekapFilterMurid').value && String(m.id) !== String(document.getElementById('rekapFilterMurid').value)) return false; return true; }); 
-  const exportData = muridFiltered.map((m, i) => { const jurnals = filtered.filter(j => String(j.muridId) === String(m.id)); const totalHal = jurnals.reduce((s,j) => s + (Number(j.halaman)||0), 0); const target = m.target || 0; const persen = target > 0 ? (totalHal/target*100).toFixed(1) : 0; const kelas = dataKelas.find(k => String(k.id) === String(m.kelasId)); return { 'No': i+1, 'Nama Murid': m.nama, 'Kelas': kelas ? kelas.nama : '-', 'Program': m.program, 'Target (hal)': target, 'Total Setoran': jurnals.length, 'Total Halaman': totalHal, 'Pencapaian (%)': persen }; }); 
-  generateExcel(exportData, 'Rekap', 'Rekap_Tahfiz.xlsx', [{wch:5},{wch:25},{wch:15},{wch:10},{wch:12},{wch:12},{wch:12},{wch:12}]); 
-  showToast('Rekap berhasil diexport ke Excel'); 
+function exportRekapExcel() {
+  const { rows } = getRekapData();
+  if (!rows.length) return showToast('Tidak ada data untuk diexport', 'warning');
+  const exportData = rows.map((r, i) => ({
+    'No': i + 1, 'Nama Murid': r.murid.nama, 'Kelas': r.kelasNama, 'Program': r.murid.program,
+    'Target (hal)': r.target, 'Total Setoran': r.jurnals.length, 'Total Halaman': Math.round(r.totalHal * 10) / 10,
+    'Pencapaian (%)': r.target > 0 ? Number((r.totalHal / r.target * 100).toFixed(1)) : 0
+  }));
+  generateExcel(exportData, 'Rekap', 'Rekap_Tahfiz.xlsx', [{wch:5},{wch:25},{wch:15},{wch:10},{wch:12},{wch:12},{wch:12},{wch:12}]);
+  showToast('Rekap berhasil diexport ke Excel');
 }
 
+/* =====================================================================
+   INISIALISASI
+   ===================================================================== */
 document.addEventListener('DOMContentLoaded', () => {
-  fetchData();
-  if (sessionStorage.getItem('tahfiz_logged_in') === 'true') {
-    isLoggedIn = true;
-    document.getElementById('btnLogin').classList.add('d-none');
-    document.getElementById('btnLoginMobile').classList.add('d-none');
-    document.getElementById('btnLogout').classList.remove('d-none');
-    document.getElementById('btnLogoutMobile').classList.remove('d-none');
-    showAdminActions(true);
-  } else {
-    showAdminActions(false);
-  }
-});
+  initStaticOptions();
+  applyLoginState(sessionStorage.getItem('tahfiz_logged_in') === 'true');
+  loadData();
 
-document.getElementById('loginPass').addEventListener('keyup', function(event) {
-  if (event.key === 'Enter') doLogin();
-});
-document.getElementById('loginUser').addEventListener('keyup', function(event) {
-  if (event.key === 'Enter') doLogin();
+  // Muat ulang otomatis saat tab browser dibuka kembali / koneksi pulih
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && Date.now() - lastFetch > AUTO_REFRESH_MS) loadData({ silent: true });
+  });
+  window.addEventListener('online', () => loadData({ silent: true }));
+  // Halaman dipulihkan dari cache "back/forward" browser -> paksa ambil data terbaru
+  window.addEventListener('pageshow', e => { if (e.persisted) loadData({ silent: true }); });
+
+  $('loginPass').addEventListener('keyup', e => { if (e.key === 'Enter') doLogin(); });
+  $('loginUser').addEventListener('keyup', e => { if (e.key === 'Enter') doLogin(); });
 });
 </script>
 </body>
